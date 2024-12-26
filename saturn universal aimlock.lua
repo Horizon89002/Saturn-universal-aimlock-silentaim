@@ -27,7 +27,6 @@ local SilentAimSettings = {
     HitChance = 100
 }
 
--- variables
 getgenv().SilentAimSettings = Settings
 
 local Camera = workspace.CurrentCamera
@@ -102,13 +101,13 @@ local ExpectedArguments = {
 }
 
 function CalculateChance(Percentage)
-    -- // Floor the percentage
+
     Percentage = math.floor(Percentage)
 
-    -- // Get the chance
+
     local chance = math.floor(Random.new().NextNumber(Random.new(), 0, 1) * 100) / 100
 
-    -- // Return
+
     return chance <= Percentage / 100
 end
 
@@ -190,22 +189,21 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- AimLock Variables
 local isLockedOn = false
 local targetPlayer = nil
 local lockEnabled = false
 local smoothingFactor = 0.1
 local predictionFactor = 0.0
 local bodyPartSelected = "Head"
-local aimLockEnabled = false -- New variable for toggling the entire AimLock feature
+local aimLockEnabled = false 
 
--- Utility Functions
+
 local function getBodyPart(character, part)
     return character:FindFirstChild(part) and part or "Head"
 end
 
 local function getNearestPlayerToMouse()
-    if not aimLockEnabled then return nil end -- Disable functionality when AimLock is off
+    if not aimLockEnabled then return nil end 
     local nearestPlayer = nil
     local shortestDistance = math.huge
     local mousePosition = Camera:ViewportPointToRay(Mouse.X, Mouse.Y).Origin
@@ -243,7 +241,7 @@ local function toggleLockOnPlayer()
     end
 end
 
--- Smooth Camera Lock
+
 RunService.RenderStepped:Connect(function()
     if aimLockEnabled and lockEnabled and isLockedOn and targetPlayer and targetPlayer.Character then
         local partName = getBodyPart(targetPlayer.Character, bodyPartSelected)
@@ -262,7 +260,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 
--- ui creating & handling
+
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horizon89002/Saturn-universal-aimlock-silentaim/refs/heads/main/manage2.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horizon89002/Saturn-universal-aimlock-silentaim/refs/heads/main/manager.lua"))()
@@ -274,7 +272,7 @@ local aimbox = GeneralTab:AddRightGroupbox("AimLock settings")
 local velbox = GeneralTab:AddRightGroupbox("anti lock")
 
 
--- AimLock Enable/Disable Toggle
+
 aimbox:AddToggle("aimLock_Enabled", {
     Text = "enable/disable AimLock",
     Default = false,
@@ -289,7 +287,7 @@ aimbox:AddToggle("aimLock_Enabled", {
     end,
 })
 
--- AimLock Toggle and KeyPicker
+
 aimbox:AddToggle("aim_Enabled", {
     Text = "aimlock keybind",
     Default = false,
@@ -349,63 +347,72 @@ aimbox:AddDropdown("BodyParts", {
 
 local reverseResolveIntensity = 5
 getgenv().Desync = false
+getgenv().DesyncEnabled = false  
 
--- Heartbeat loop to apply desync effect
+
 game:GetService("RunService").Heartbeat:Connect(function()
-    if getgenv().Desync then
-        local player = game.Players.LocalPlayer
-        local character = player.Character
-        if not character then return end 
+    if getgenv().DesyncEnabled then  
+        if getgenv().Desync then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if not character then return end 
 
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoidRootPart then return end
+            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            if not humanoidRootPart then return end
 
-        local originalVelocity = humanoidRootPart.Velocity
+            local originalVelocity = humanoidRootPart.Velocity
 
-        -- Apply random offset to simulate reverse resolve desync
-        local randomOffset = Vector3.new(
-            math.random(-1, 1) * reverseResolveIntensity * 1000,
-            math.random(-1, 1) * reverseResolveIntensity * 1000,
-            math.random(-1, 1) * reverseResolveIntensity * 1000
-        )
+            local randomOffset = Vector3.new(
+                math.random(-1, 1) * reverseResolveIntensity * 1000,
+                math.random(-1, 1) * reverseResolveIntensity * 1000,
+                math.random(-1, 1) * reverseResolveIntensity * 1000
+            )
 
-        humanoidRootPart.Velocity = randomOffset
-        humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(
-            0,
-            math.random(-1, 1) * reverseResolveIntensity * 0.001,
-            0
-        )
+            humanoidRootPart.Velocity = randomOffset
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(
+                0,
+                math.random(-1, 1) * reverseResolveIntensity * 0.001,
+                0
+            )
 
-        -- Wait until next RenderStepped to reset the velocity
-        game:GetService("RunService").RenderStepped:Wait()
+            game:GetService("RunService").RenderStepped:Wait()
 
-        -- Restore original velocity after desync
-        humanoidRootPart.Velocity = originalVelocity
+            humanoidRootPart.Velocity = originalVelocity
+        end
     end
 end)
 
+velbox:AddToggle("desyncMasterEnabled", {
+    Text = "Enable Desync",
+    Default = false,
+    Tooltip = "Enable or disable the entire desync system.",
+    Callback = function(value)
+        getgenv().DesyncEnabled = value  
+    end
+})
+
+
 velbox:AddToggle("desyncEnabled", {
-    Text = "velocity desync",
+    Text = "Desync keybind",
     Default = false,
     Tooltip = "Enable or disable reverse resolve desync.",
     Callback = function(value)
         getgenv().Desync = value
     end
-
-
 }):AddKeyPicker("desyncToggleKey", {
     Default = "V", 
     SyncToggleState = true,
     Mode = "Toggle",
     Text = "Desync Toggle Key",
-    Tooltip = "it makes locker not lock onto you.",
+    Tooltip = "Toggle to enable/disable velocity desync.",
     Callback = function(value)
         getgenv().Desync = value
     end
 })
 
+
 velbox:AddSlider("ReverseResolveIntensity", {
-    Text = "reverse resolve",
+    Text = "Reverse Resolve Intensity",
     Default = 5,
     Min = 1,
     Max = 10,
@@ -422,7 +429,7 @@ local antiLockEnabled = false
 local resolverIntensity = 1.0
 local resolverMethod = "Recalculate"
 
--- Modify AimLock to handle reverse resolvers
+
 RunService.RenderStepped:Connect(function()
     if aimLockEnabled and isLockedOn and targetPlayer and targetPlayer.Character then
         local partName = getBodyPart(targetPlayer.Character, bodyPartSelected)
@@ -431,20 +438,19 @@ RunService.RenderStepped:Connect(function()
         if part and targetPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
             local predictedPosition = part.Position + (part.AssemblyLinearVelocity * predictionFactor)
 
-            -- Anti Lock Resolver Counter Logic
             if antiLockEnabled then
                 if resolverMethod == "Recalculate" then
-                    -- Counter reverse-resolve by recalculating predicted position
+
                     predictedPosition = predictedPosition + (part.AssemblyLinearVelocity * resolverIntensity)
                 elseif resolverMethod == "Randomize" then
-                    -- Add controlled randomness to confuse reverse-resolvers
+
                     predictedPosition = predictedPosition + Vector3.new(
                         math.random() * resolverIntensity - (resolverIntensity / 2),
                         math.random() * resolverIntensity - (resolverIntensity / 2),
                         math.random() * resolverIntensity - (resolverIntensity / 2)
                     )
                 elseif resolverMethod == "Invert" then
-                    -- Completely invert velocity predictions
+
                     predictedPosition = predictedPosition - (part.AssemblyLinearVelocity * resolverIntensity * 2)
                 end
             end
@@ -458,7 +464,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Add Anti Lock Resolver UI Elements
+
 aimbox:AddToggle("antiLock_Enabled", {
     Text = "Enable Anti Lock Resolver",
     Default = false,
@@ -569,8 +575,7 @@ resume(create(function()
             if getClosestPlayer() then 
                 local Root = getClosestPlayer().Parent.PrimaryPart or getClosestPlayer()
                 local RootToViewportPoint, IsOnScreen = WorldToViewportPoint(Camera, Root.Position);
-                -- using PrimaryPart instead because if your Target Part is "Random" it will flicker the square between the Target's Head and HumanoidRootPart (its annoying)
-                
+
                 mouse_box.Visible = IsOnScreen
                 mouse_box.Position = Vector2.new(RootToViewportPoint.X, RootToViewportPoint.Y)
             else 
