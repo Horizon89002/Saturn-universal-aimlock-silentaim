@@ -11,7 +11,7 @@ local SilentAimSettings = {
     Enabled = false,
     
     ClassName = "Saturn_v1  |  universal v1.02",
-    ToggleKey = "RightAlt",
+    ToggleKey = "U",
     
     TeamCheck = false,
     VisibleCheck = false, 
@@ -261,7 +261,7 @@ end)
 
 
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horizon89002/Saturn-universal-aimlock-silentaim/refs/heads/main/linoralib.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horizon89002/Saturn-universal-aimlock-silentaim/refs/heads/main/manage2.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horizon89002/Saturn-universal-aimlock-silentaim/refs/heads/main/manager.lua"))()
 
@@ -300,7 +300,7 @@ aimbox:AddToggle("aim_Enabled", {
         end
     end,
 }):AddKeyPicker("aim_Enabled_KeyPicker", {
-    Default = "Q", -- Default key
+    Default = "Q", 
     SyncToggleState = true,
     Mode = "Toggle",
     Text = "AimLock Key",
