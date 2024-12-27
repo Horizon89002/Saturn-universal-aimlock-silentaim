@@ -267,10 +267,9 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/H
 
 local Window = Library:CreateWindow({Title = 'Saturn | universal v1.2', Center = true, AutoShow = true, TabPadding = 8, MenuFadeTime = 0.2})
 local GeneralTab = Window:AddTab("Main")
-local MainBOX = GeneralTab:AddLeftTabbox("silent aim") do
 local aimbox = GeneralTab:AddRightGroupbox("AimLock settings")
 local velbox = GeneralTab:AddRightGroupbox("anti lock")
-
+local espbox = GeneralTab:AddRightGroupbox("esp")
 
 
 aimbox:AddToggle("aimLock_Enabled", {
@@ -412,7 +411,7 @@ velbox:AddToggle("desyncEnabled", {
 
 
 velbox:AddSlider("ReverseResolveIntensity", {
-    Text = "Reverse Resolve Intensity",
+    Text = "velocity intensity",
     Default = 5,
     Min = 1,
     Max = 10,
@@ -488,7 +487,7 @@ aimbox:AddSlider("ResolverIntensity", {
 
 aimbox:AddDropdown("ResolverMethods", {
     Values = {"Recalculate", "Randomize", "Invert"},
-    Default = "Recalculate",
+    Default = "Recalculate", 
     Multi = false,
     Text = "Resolver Method",
     Tooltip = "Select the method used by the Anti Lock Resolver.",
@@ -498,75 +497,137 @@ aimbox:AddDropdown("ResolverMethods", {
 })
 
 
-    local Main = MainBOX:AddTab("silent aim")
-    
-    Main:AddToggle("aim_Enabled", {Text = "Enabled"}):AddKeyPicker("aim_Enabled_KeyPicker", {Default = "RightAlt", SyncToggleState = true, Mode = "Toggle", Text = "Enabled", NoUI = false});
-    Options.aim_Enabled_KeyPicker:OnClick(function()
-        SilentAimSettings.Enabled = not SilentAimSettings.Enabled
-        
-        Toggles.aim_Enabled.Value = SilentAimSettings.Enabled
-        Toggles.aim_Enabled:SetValue(SilentAimSettings.Enabled)
-        
-        mouse_box.Visible = SilentAimSettings.Enabled
-    end)
-    
-    Main:AddToggle("TeamCheck", {Text = "Team Check", Default = SilentAimSettings.TeamCheck}):OnChanged(function()
-        SilentAimSettings.TeamCheck = Toggles.TeamCheck.Value
-    end)
-    Main:AddToggle("VisibleCheck", {Text = "Visible Check", Default = SilentAimSettings.VisibleCheck}):OnChanged(function()
-        SilentAimSettings.VisibleCheck = Toggles.VisibleCheck.Value
-    end)
-    Main:AddDropdown("TargetPart", {AllowNull = true, Text = "Target Part", Default = SilentAimSettings.TargetPart, Values = {"Head", "HumanoidRootPart", "Random"}}):OnChanged(function()
-        SilentAimSettings.TargetPart = Options.TargetPart.Value
-    end)
-    Main:AddDropdown("Method", {AllowNull = true, Text = "Silent Aim Method", Default = SilentAimSettings.SilentAimMethod, Values = {
-        "Raycast","FindPartOnRay",
+local MainBOX = GeneralTab:AddLeftTabbox("silent aim")
+local Main = MainBOX:AddTab("silent aim")
+
+
+Main:AddToggle("aim_Enabled", {Text = "Enabled"})
+    :AddKeyPicker("aim_Enabled_KeyPicker", {
+        Default = "U", 
+        SyncToggleState = true, 
+        Mode = "Toggle", 
+        Text = "Enabled", 
+        NoUI = false
+    })
+
+Options.aim_Enabled_KeyPicker:OnClick(function()
+    SilentAimSettings.Enabled = not SilentAimSettings.Enabled
+    Toggles.aim_Enabled.Value = SilentAimSettings.Enabled
+    Toggles.aim_Enabled:SetValue(SilentAimSettings.Enabled)
+    mouse_box.Visible = SilentAimSettings.Enabled
+end)
+
+
+
+
+Main:AddToggle("TeamCheck", {
+    Text = "Team Check", 
+    Default = SilentAimSettings.TeamCheck
+}):OnChanged(function()
+    SilentAimSettings.TeamCheck = Toggles.TeamCheck.Value
+end)
+
+
+Main:AddToggle("VisibleCheck", {
+    Text = "Visible Check", 
+    Default = SilentAimSettings.VisibleCheck
+}):OnChanged(function()
+    SilentAimSettings.VisibleCheck = Toggles.VisibleCheck.Value
+end)
+
+
+Main:AddDropdown("TargetPart", {
+    AllowNull = true, 
+    Text = "Target Part", 
+    Default = SilentAimSettings.TargetPart, 
+    Values = {"Head", "HumanoidRootPart", "Random"}
+}):OnChanged(function()
+    SilentAimSettings.TargetPart = Options.TargetPart.Value
+end)
+
+
+Main:AddDropdown("Method", {
+    AllowNull = true, 
+    Text = "Silent Aim Method", 
+    Default = SilentAimSettings.SilentAimMethod, 
+    Values = {
+        "Raycast",
+        "FindPartOnRay",
         "FindPartOnRayWithWhitelist",
         "FindPartOnRayWithIgnoreList",
         "Mouse.Hit/Target"
-    }}):OnChanged(function() 
-        SilentAimSettings.SilentAimMethod = Options.Method.Value 
-    end)
-    Main:AddSlider('HitChance', {
-        Text = 'Hit chance',
-        Default = 100,
-        Min = 0,
-        Max = 100,
-        Rounding = 1,
-    
-        Compact = false,
-    })
-    Options.HitChance:OnChanged(function()
-        SilentAimSettings.HitChance = Options.HitChance.Value
-    end)
-end
+    }
+}):OnChanged(function() 
+    SilentAimSettings.SilentAimMethod = Options.Method.Value 
+end)
 
-local MiscellaneousBOX = GeneralTab:AddLeftTabbox("Miscellaneous")
+
+Main:AddSlider("HitChance", {
+    Text = "Hit Chance",
+    Default = 100,
+    Min = 0,
+    Max = 100,
+    Rounding = 1,
+    Compact = false,
+}):OnChanged(function()
+    SilentAimSettings.HitChance = Options.HitChance.Value
+end)
+
+
 local FieldOfViewBOX = GeneralTab:AddLeftTabbox("Field Of View") do
     local Main = FieldOfViewBOX:AddTab("Visuals")
     
-    Main:AddToggle("Visible", {Text = "Show FOV Circle"}):AddColorPicker("Color", {Default = Color3.fromRGB(54, 57, 241)}):OnChanged(function()
-        fov_circle.Visible = Toggles.Visible.Value
-        SilentAimSettings.FOVVisible = Toggles.Visible.Value
-    end)
-    Main:AddSlider("Radius", {Text = "FOV Circle Radius", Min = 0, Max = 360, Default = 130, Rounding = 0}):OnChanged(function()
+
+    Main:AddToggle("Visible", {Text = "Show FOV Circle"})
+        :AddColorPicker("Color", {Default = Color3.fromRGB(54, 57, 241)})
+        :OnChanged(function()
+            fov_circle.Visible = Toggles.Visible.Value
+            SilentAimSettings.FOVVisible = Toggles.Visible.Value
+        end)
+
+
+    Main:AddSlider("Radius", {
+        Text = "FOV Circle Radius", 
+        Min = 0, 
+        Max = 360, 
+        Default = 130, 
+        Rounding = 0
+    }):OnChanged(function()
         fov_circle.Radius = Options.Radius.Value
         SilentAimSettings.FOVRadius = Options.Radius.Value
     end)
-    Main:AddToggle("MousePosition", {Text = "Show Silent Aim Target"}):AddColorPicker("MouseVisualizeColor", {Default = Color3.fromRGB(54, 57, 241)}):OnChanged(function()
-        mouse_box.Visible = Toggles.MousePosition.Value 
-        SilentAimSettings.ShowSilentAimTarget = Toggles.MousePosition.Value 
-    end)
+
+
+    Main:AddToggle("MousePosition", {Text = "Show Silent Aim Target"})
+        :AddColorPicker("MouseVisualizeColor", {Default = Color3.fromRGB(54, 57, 241)})
+        :OnChanged(function()
+            mouse_box.Visible = Toggles.MousePosition.Value 
+            SilentAimSettings.ShowSilentAimTarget = Toggles.MousePosition.Value 
+        end)
+end
+
+
+local MiscellaneousBOX = GeneralTab:AddLeftTabbox("Miscellaneous") do
     local PredictionTab = MiscellaneousBOX:AddTab("Prediction")
-    PredictionTab:AddToggle("Prediction", {Text = "Mouse.Hit/Target Prediction"}):OnChanged(function()
-        SilentAimSettings.MouseHitPrediction = Toggles.Prediction.Value
-    end)
-    PredictionTab:AddSlider("Amount", {Text = "Prediction Amount", Min = 0.165, Max = 1, Default = 0.165, Rounding = 3}):OnChanged(function()
+    
+
+    PredictionTab:AddToggle("Prediction", {Text = "Mouse.Hit/Target Prediction"})
+        :OnChanged(function()
+            SilentAimSettings.MouseHitPrediction = Toggles.Prediction.Value
+        end)
+    
+
+    PredictionTab:AddSlider("Amount", {
+        Text = "Prediction Amount", 
+        Min = 0.165, 
+        Max = 1, 
+        Default = 0.165, 
+        Rounding = 3
+    }):OnChanged(function()
         PredictionAmount = Options.Amount.Value
         SilentAimSettings.MouseHitPredictionAmount = Options.Amount.Value
     end)
 end
-
 
 
 resume(create(function()
@@ -592,7 +653,7 @@ resume(create(function()
     end)
 end))
 
--- hooks
+
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
     local Method = getnamecallmethod()
@@ -675,6 +736,102 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, Index)
 
     return oldIndex(self, Index)
 end))
+
+local Players = game:GetService("Players") 
+local RunService = game:GetService("RunService") 
+local Camera = workspace.CurrentCamera 
+local LocalPlayer = Players.LocalPlayer 
+
+local healthBars = {}
+local Settings = { HealthBar = false } 
+
+
+local function createSquare(color, size, outlineColor)
+    local square = Drawing.new("Square")
+    square.Visible = false
+    square.Center = true
+    square.Outline = true
+    square.OutlineColor = outlineColor or Color3.fromRGB(0, 0, 0)
+    square.Size = size or Vector2.new(4, 40)
+    square.Color = color or Color3.fromRGB(0, 255, 0)
+    return square
+end
+
+
+local function updateHealthBars()
+    local cameraCFrame = Camera.CFrame
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local healthBar = healthBars[player]
+            if not healthBar then
+                healthBar = createSquare(Color3.fromRGB(0, 255, 0), Vector2.new(4, 40), Color3.fromRGB(0, 0, 0))
+                healthBars[player] = healthBar
+            end
+
+            local character = player.Character
+            if Settings.HealthBar and character and character:FindFirstChild("Humanoid") and character:FindFirstChild("HumanoidRootPart") then
+                local humanoid = character.Humanoid
+                local humanoidRootPart = character.HumanoidRootPart
+
+                if humanoid.Health > 0 then
+                    local pos, visible = Camera:WorldToViewportPoint(humanoidRootPart.Position + Vector3.new(2.5, 0, 0))
+                    if visible then
+                        local healthPercent = humanoid.Health / humanoid.MaxHealth
+                        local distance = (cameraCFrame.Position - humanoidRootPart.Position).Magnitude
+                        local scale = math.clamp(1 / (distance * 0.02), 0.5, 2.5)
+
+                        local healthBarSize = Vector2.new(4 * scale, 40 * scale * healthPercent)
+                        healthBar.Visible = true
+                        healthBar.Position = Vector2.new(pos.X, pos.Y) - Vector2.new(0, healthBarSize.Y / 2)
+
+                        if healthPercent > 0.5 then
+                            healthBar.Color = Color3.fromRGB((1 - healthPercent) * 510, 255, 0)
+                        else
+                            healthBar.Color = Color3.fromRGB(255, healthPercent * 510, 0)
+                        end
+
+                        healthBar.Size = healthBarSize
+                    else
+                        healthBar.Visible = false
+                    end
+                else
+                    healthBar.Visible = false
+                end
+            else
+                healthBar.Visible = false
+            end
+        end
+    end
+end
+
+
+Players.PlayerAdded:Connect(function(player)
+    healthBars[player] = createSquare(Color3.fromRGB(0, 255, 0), Vector2.new(4, 40), Color3.fromRGB(0, 0, 0))
+end)
+
+
+Players.PlayerRemoving:Connect(function(player)
+    local healthBar = healthBars[player]
+    if healthBar then
+        healthBar.Visible = false
+        healthBar:Remove()
+        healthBars[player] = nil
+    end
+end)
+
+
+RunService.RenderStepped:Connect(updateHealthBars)
+
+
+espbox:AddToggle("Healthbar", {
+    Text = "Health Bar",
+    Default = false,
+    Tooltip = "Toggle health bars for players",
+    Callback = function(Value)
+        Settings.HealthBar = Value
+    end
+})
+
 
 
 ThemeManager:SetLibrary(Library)
