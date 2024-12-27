@@ -1,4 +1,6 @@
 
+
+
 if not game:IsLoaded() then 
     game.Loaded:Wait()
 end
@@ -6,6 +8,9 @@ end
 if not syn or not protectgui then
     getgenv().protectgui = function() end
 end
+
+ 
+
 
 local SilentAimSettings = {
     Enabled = false,
@@ -183,6 +188,7 @@ local function getClosestPlayer()
     return Closest
 end
 
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -265,11 +271,29 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horiz
 local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horizon89002/Saturn-universal-aimlock-silentaim/refs/heads/main/manage2.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Horizon89002/Saturn-universal-aimlock-silentaim/refs/heads/main/manager.lua"))()
 
-local Window = Library:CreateWindow({Title = 'Saturn | universal v1.2', Center = true, AutoShow = true, TabPadding = 8, MenuFadeTime = 0.2})
+
+local Window = Library:CreateWindow({
+    Title = 'Saturn | universal v1.2',
+    Center = true,
+    AutoShow = true,  
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
 local GeneralTab = Window:AddTab("Main")
 local aimbox = GeneralTab:AddRightGroupbox("AimLock settings")
-local velbox = GeneralTab:AddRightGroupbox("anti lock")
-local espbox = GeneralTab:AddRightGroupbox("esp")
+local velbox = GeneralTab:AddRightGroupbox("Anti Lock")
+local frabox = GeneralTab:AddRightGroupbox("Movement")
+local settingsTab = Window:AddTab("Settings")
+
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+ThemeManager:ApplyToTab(settingsTab)
+SaveManager:BuildConfigSection(settingsTab)
+
+
+
 
 
 aimbox:AddToggle("aimLock_Enabled", {
@@ -321,6 +345,7 @@ aimbox:AddSlider("Smoothing", {
     end,
 })
 
+
 aimbox:AddSlider("Prediction", {
     Text = "Prediction Factor",
     Default = 0.0,
@@ -343,6 +368,7 @@ aimbox:AddDropdown("BodyParts", {
         bodyPartSelected = value
     end,
 })
+
 
 local reverseResolveIntensity = 5
 getgenv().Desync = false
@@ -516,8 +542,6 @@ Options.aim_Enabled_KeyPicker:OnClick(function()
     Toggles.aim_Enabled:SetValue(SilentAimSettings.Enabled)
     mouse_box.Visible = SilentAimSettings.Enabled
 end)
-
-
 
 
 Main:AddToggle("TeamCheck", {
@@ -737,6 +761,88 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, Index)
     return oldIndex(self, Index)
 end))
 
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local BOXEnabled = false
+local espBoxes = {}
+
+
+local function createESPBox(color)
+    local box = Drawing.new("Square")
+    box.Color = color
+    box.Thickness = 1
+    box.Filled = false
+    box.Visible = false
+    return box
+end
+
+
+local function updateESPBoxes()
+    if BOXEnabled then
+        for player, box in pairs(espBoxes) do
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = player.Character.HumanoidRootPart
+                local screenPosition, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+                if onScreen then
+                    local distance = screenPosition.Z
+                    local scaleFactor = 70 / distance 
+                    local boxWidth = 30 * scaleFactor 
+                    local boxHeight = 50 * scaleFactor 
+
+                    local boxX = screenPosition.X - boxWidth / 2
+                    local boxY = screenPosition.Y - boxHeight / 2
+
+                    box.Size = Vector2.new(boxWidth, boxHeight)
+                    box.Position = Vector2.new(boxX, boxY)
+                    box.Visible = true
+                else
+                    box.Visible = false
+                end
+            else
+                box.Visible = false
+            end
+        end
+    end
+end
+
+
+local function addESP(player)
+    if player ~= Players.LocalPlayer then
+        local box = createESPBox(Color3.fromRGB(255, 255, 255)) 
+        espBoxes[player] = box
+
+        player.CharacterAdded:Connect(function()
+            espBoxes[player] = box
+        end)
+    end
+end
+
+
+local function removeESP(player)
+    if espBoxes[player] then
+        espBoxes[player].Visible = false  
+        espBoxes[player] = nil
+    end
+end
+
+
+Players.PlayerAdded:Connect(addESP)
+Players.PlayerRemoving:Connect(removeESP)
+
+
+for _, player in pairs(Players:GetPlayers()) do
+    addESP(player)
+end
+
+
+RunService.RenderStepped:Connect(updateESPBoxes)
+
+
+
 local Players = game:GetService("Players") 
 local RunService = game:GetService("RunService") 
 local Camera = workspace.CurrentCamera 
@@ -757,6 +863,7 @@ local function createSquare(color, size, outlineColor)
     return square
 end
 
+local espbox = GeneralTab:AddLeftGroupbox("esp")
 
 local function updateHealthBars()
     local cameraCFrame = Camera.CFrame
@@ -823,6 +930,98 @@ end)
 RunService.RenderStepped:Connect(updateHealthBars)
 
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local TRAEnabled = false
+local espTracers = {}
+
+local function createTracer(color)
+    local tracer = Drawing.new("Line")
+    tracer.Color = color
+    tracer.Thickness = 2
+    tracer.Visible = false
+    return tracer
+end
+
+local function smoothInterpolation(from, to, factor)
+    return from + (to - from) * factor
+end
+
+
+local function updateTracers()
+    if TRAEnabled then
+        for player, tracer in pairs(espTracers) do
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = player.Character.HumanoidRootPart
+                local screenPosition, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+                if onScreen then
+
+                    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                    local targetPosition = Vector2.new(screenPosition.X, screenPosition.Y)
+                    tracer.From = smoothInterpolation(tracer.From, screenCenter, 0.1)
+                    tracer.To = smoothInterpolation(tracer.To, targetPosition, 0.1)
+
+                    tracer.Visible = true
+                else
+                    tracer.Visible = false
+                end
+            else
+                tracer.Visible = false
+            end
+        end
+    end
+end
+
+
+local function addTracer(player)
+    if player ~= Players.LocalPlayer then
+        local tracer = createTracer(Color3.fromRGB(255, 255, 255)) 
+        espTracers[player] = tracer
+
+        player.CharacterAdded:Connect(function()
+            espTracers[player] = tracer
+        end)
+    end
+end
+
+
+local function removeTracer(player)
+    if espTracers[player] then
+        espTracers[player].Visible = false
+        espTracers[player] = nil
+    end
+end
+
+
+Players.PlayerAdded:Connect(addTracer)
+Players.PlayerRemoving:Connect(removeTracer)
+
+
+for _, player in pairs(Players:GetPlayers()) do
+    addTracer(player)
+end
+
+
+RunService.RenderStepped:Connect(updateTracers)
+
+
+espbox:AddToggle("EnableTracer", {
+    Text = "Enable Tracers",
+    Default = false,
+    Callback = function(state)
+        TRAEnabled = state
+
+        if not TRAEnabled then
+            for _, tracer in pairs(espTracers) do
+                tracer.Visible = false
+            end
+        end
+    end,
+})
+
 espbox:AddToggle("Healthbar", {
     Text = "Health Bar",
     Default = false,
@@ -832,15 +1031,82 @@ espbox:AddToggle("Healthbar", {
     end
 })
 
+espbox:AddToggle("EnableESP", {
+    Text = "Box ESP",
+    Default = false,
+    Callback = function(state)
+        BOXEnabled = state
+        if not BOXEnabled then
+            for _, box in pairs(espBoxes) do
+                box.Visible = false
+            end
+        end
+    end,
+})
 
 
-ThemeManager:SetLibrary(Library)
-SaveManager:SetLibrary(Library)
+local localPlayer = game:GetService("Players").LocalPlayer
+local Cmultiplier = 1  
+local isSpeedActive = false
+local isFunctionalityEnabled = true  
 
 
-local settingsTab = Window:AddTab("Settings")
+frabox:AddToggle("functionalityEnabled", {
+    Text = "Enable/Disable CFrame Speed",
+    Default = true,
+    Tooltip = "Enable or disable the speed thingy.",
+    Callback = function(value)
+        isFunctionalityEnabled = value
+    end
+})
 
-ThemeManager:ApplyToTab(settingsTab)
-SaveManager:BuildConfigSection(settingsTab)
+
+frabox:AddToggle("speedEnabled", {
+    Text = "Speed Toggle",
+    Default = false,
+    Tooltip = "It makes you go fast.",
+    Callback = function(value)
+        isSpeedActive = value
+    end
+}):AddKeyPicker("speedToggleKey", {
+    Default = "C",  
+    SyncToggleState = false,
+    Mode = "Toggle",
+    Text = "Speed Toggle Key",
+    Tooltip = "CFrame keybind.",
+    Callback = function(value)
+        isSpeedActive = value
+    end
+})
+
+
+frabox:AddSlider("cframespeed", {
+    Text = "CFrame Multiplier",
+    Default = 1,
+    Min = 1,
+    Max = 20,
+    Rounding = 1,
+    Tooltip = "The CFrame speed.",
+    Callback = function(value)
+        Cmultiplier = value
+    end,
+})
+
+
+while true do
+    task.wait()
+
+    if isFunctionalityEnabled then
+        if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = localPlayer.Character:FindFirstChild("Humanoid")
+
+            if isSpeedActive and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                local moveDirection = humanoid.MoveDirection.Unit
+                localPlayer.Character.HumanoidRootPart.CFrame = localPlayer.Character.HumanoidRootPart.CFrame + moveDirection * Cmultiplier
+            end
+        end
+    end
+end
+
 
 ThemeManager:LoadDefaultTheme()
