@@ -281,9 +281,8 @@ local Window = Library:CreateWindow({
 })
 
 local GeneralTab = Window:AddTab("Main")
-local aimbox = GeneralTab:AddRightGroupbox("AimLock settings")
-local velbox = GeneralTab:AddRightGroupbox("Anti Lock")
-local frabox = GeneralTab:AddRightGroupbox("Movement")
+local aimbox = GeneralTab:AddRightGroupbox("           AimLock")
+local velbox = GeneralTab:AddRightGroupbox("        Anti Lock")
 local settingsTab = Window:AddTab("Settings")
 
 
@@ -291,9 +290,6 @@ ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
 ThemeManager:ApplyToTab(settingsTab)
 SaveManager:BuildConfigSection(settingsTab)
-
-
-
 
 
 aimbox:AddToggle("aimLock_Enabled", {
@@ -525,7 +521,7 @@ aimbox:AddDropdown("ResolverMethods", {
 
 local MainBOX = GeneralTab:AddLeftTabbox("silent aim")
 local Main = MainBOX:AddTab("silent aim")
-
+local frabox = GeneralTab:AddLeftGroupbox("Movement")
 
 Main:AddToggle("aim_Enabled", {Text = "Enabled"})
     :AddKeyPicker("aim_Enabled_KeyPicker", {
@@ -761,6 +757,183 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, Index)
     return oldIndex(self, Index)
 end))
 
+
+local orbbox = GeneralTab:AddRightGroupbox("        Orbit AimLock")
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+local isLockedOn = false
+local targetPlayer = nil
+local lockEnabled = false
+local aimLockEnabled = false
+local bodyPartSelected = "Head"
+
+local isOrbiting = false
+local orbitDuration = 2 
+local orbitDistance = 5 
+
+local function getBodyPart(character, part)
+    return character:FindFirstChild(part) and part or "Head"
+end
+
+local function getNearestPlayerToMouse()
+    if not aimLockEnabled then return nil end
+    local nearestPlayer = nil
+    local shortestDistance = math.huge
+    local mousePosition = Camera:ViewportPointToRay(Mouse.X, Mouse.Y).Origin
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(bodyPartSelected) then
+            local part = player.Character[bodyPartSelected]
+            local screenPosition, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                if distance < shortestDistance then
+                    nearestPlayer = player
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+    return nearestPlayer
+end
+
+local function orbitCharacter(target, duration)
+    if not target or not target.Character then return end
+
+    isOrbiting = true
+    local humanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local targetPart = target.Character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart and targetPart then
+        humanoidRootPart.CanCollide = false
+
+        local startTime = tick()
+        RunService.RenderStepped:Connect(function()
+            if tick() - startTime > duration then
+                humanoidRootPart.CanCollide = true
+                isOrbiting = false
+                isLockedOn = false
+                return
+            end
+
+            local angle = (tick() - startTime) * math.pi * 2 * 5 
+            local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * orbitDistance
+            humanoidRootPart.CFrame = CFrame.new(targetPart.Position + offset)
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+        end)
+    end
+end
+
+local function toggleLockOnPlayer()
+    if not lockEnabled or not aimLockEnabled then return end
+
+    if isLockedOn then
+        isLockedOn = false
+        targetPlayer = nil
+    else
+        targetPlayer = getNearestPlayerToMouse()
+        if targetPlayer and targetPlayer.Character then
+            local part = getBodyPart(targetPlayer.Character, bodyPartSelected)
+            if targetPlayer.Character:FindFirstChild(part) then
+                isLockedOn = true
+                orbitCharacter(targetPlayer, orbitDuration)
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if aimLockEnabled and lockEnabled and isLockedOn and targetPlayer and targetPlayer.Character then
+        local partName = getBodyPart(targetPlayer.Character, bodyPartSelected)
+        local part = targetPlayer.Character:FindFirstChild(partName)
+
+        if part and targetPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+        else
+            isLockedOn = false
+            targetPlayer = nil
+        end
+    end
+end)
+
+
+orbbox:AddToggle("orbitAimLock_Enabled", {
+    Text = "Enable/Disable Orbit AimLock",
+    Default = false,
+    Tooltip = "Toggle the Orbit AimLock feature on or off.",
+    Callback = function(value)
+        aimLockEnabled = value 
+        if not aimLockEnabled then
+            lockEnabled = false
+            isLockedOn = false
+            targetPlayer = nil
+        end
+    end,
+})
+
+orbbox:AddToggle("orbitEnabled", {
+    Text = "Orbit Keybind",
+    Default = false,
+    Tooltip = "Toggle the Orbit feature on or off.",
+    Callback = function(value)
+        lockEnabled = value 
+        if not lockEnabled then
+            isLockedOn = false
+            targetPlayer = nil
+        end
+    end,
+}):AddKeyPicker("orbitEnabled_KeyPicker", {
+    Default = "Z",
+    SyncToggleState = true,
+    Mode = "Toggle",
+    Text = "Orbit Key",
+    Tooltip = "Key to toggle Orbit AimLock.",
+    Callback = function()
+        toggleLockOnPlayer()
+    end,
+})
+
+orbbox:AddSlider("Orbit_timer", {
+    Text = "Orbit Interval (sec)",
+    Default = 2,
+    Min = 0.5,
+    Max = 30,
+    Rounding = 1,
+    Tooltip = "the amount of seconds you will orbit around",
+    Callback = function(value)
+        orbitDuration = value
+    end,
+})
+
+orbbox:AddSlider("Orbit_studs", {
+    Text = "Orbit distance",
+    Default = 5,
+    Min = 1,
+    Max = 50,
+    Rounding = 1,
+    Tooltip = "the distance of the orbit",
+    Callback = function(value)
+        orbitDistance = value
+    end,
+})
+
+orbbox:AddDropdown("orbitBodyParts", {
+    Values = {"Head", "UpperTorso", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg", "LeftUpperArm"},
+    Default = "Head",
+    Multi = false,
+    Text = "target Body Part",
+    Tooltip = "Select which body part to orbit around.",
+    Callback = function(value)
+        bodyPartSelected = value 
+    end,
+})
+
+
+local frabox = GeneralTab:AddLeftGroupbox("        Movement")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1048,12 +1221,12 @@ espbox:AddToggle("EnableESP", {
 local localPlayer = game:GetService("Players").LocalPlayer
 local Cmultiplier = 1  
 local isSpeedActive = false
-local isFunctionalityEnabled = true  
+local isFunctionalityEnabled = false
 
 
 frabox:AddToggle("functionalityEnabled", {
     Text = "Enable/Disable CFrame Speed",
-    Default = true,
+    Default = false,
     Tooltip = "Enable or disable the speed thingy.",
     Callback = function(value)
         isFunctionalityEnabled = value
@@ -1070,9 +1243,9 @@ frabox:AddToggle("speedEnabled", {
     end
 }):AddKeyPicker("speedToggleKey", {
     Default = "C",  
-    SyncToggleState = false,
+    SyncToggleState = true,
     Mode = "Toggle",
-    Text = "Speed Toggle Key",
+    Text = "Speed KeyBind",
     Tooltip = "CFrame keybind.",
     Callback = function(value)
         isSpeedActive = value
