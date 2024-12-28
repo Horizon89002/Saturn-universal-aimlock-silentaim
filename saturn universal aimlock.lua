@@ -1,6 +1,3 @@
-
-
-
 if not game:IsLoaded() then 
     game.Loaded:Wait()
 end
@@ -283,7 +280,7 @@ local Window = Library:CreateWindow({
 local GeneralTab = Window:AddTab("Main")
 local aimbox = GeneralTab:AddRightGroupbox("           AimLock")
 local velbox = GeneralTab:AddRightGroupbox("        Anti Lock")
-local settingsTab = Window:AddTab("Settings")
+local settingsTab = Window:AddTab("Other")
 
 
 ThemeManager:SetLibrary(Library)
@@ -521,7 +518,6 @@ aimbox:AddDropdown("ResolverMethods", {
 
 local MainBOX = GeneralTab:AddLeftTabbox("silent aim")
 local Main = MainBOX:AddTab("silent aim")
-local frabox = GeneralTab:AddLeftGroupbox("Movement")
 
 Main:AddToggle("aim_Enabled", {Text = "Enabled"})
     :AddKeyPicker("aim_Enabled_KeyPicker", {
@@ -757,6 +753,191 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, Index)
     return oldIndex(self, Index)
 end))
 
+local tarbox = GeneralTab:AddLeftGroupbox("          target")
+
+local function notify(title, text, duration)
+    Library:Notify(string.format("[%s] %s", title, text), duration or 5)
+end
+
+local selectedPlayer = nil
+
+local function findClosestMatch(input)
+    local inputLower = input:lower()
+    local closestMatch = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(game.Players:GetPlayers()) do
+        local playerNameLower = player.Name:lower()
+        local displayNameLower = player.DisplayName:lower()
+
+        if playerNameLower:find(inputLower) or displayNameLower:find(inputLower) then
+            local distance = math.min(
+                #playerNameLower - #inputLower,
+                #displayNameLower - #inputLower
+            )
+
+            if distance < shortestDistance then
+                closestMatch = player
+                shortestDistance = distance
+            end
+        end
+    end
+
+    return closestMatch
+end
+
+
+local viewing = false
+
+local function toggleView()
+    if not selectedPlayer then
+        notify("Error", "No player selected!", 5)
+        return
+    end
+
+    if viewing then
+        game.Workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+    else
+        game.Workspace.CurrentCamera.CameraSubject = selectedPlayer.Character.Humanoid
+    end
+
+    viewing = not viewing
+end
+
+local function teleportToPlayer()
+    if not selectedPlayer then
+        notify("Error", "No player selected!", 5)
+        return
+    end
+
+    local targetRoot = selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if targetRoot then
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = targetRoot.CFrame
+    else
+        notify("Error", "Target not valid!", 5)
+    end
+end
+
+
+local aimViewerEnabled = false
+local aimLine = nil
+
+local function toggleAimViewer()
+    if not selectedPlayer then
+        notify("Error", "No player selected!", 5)
+        return
+    end
+
+    aimViewerEnabled = not aimViewerEnabled
+
+    if aimViewerEnabled then
+        notify("Aim Viewer Enabled", "Tracking aim of: " .. selectedPlayer.Name, 5)
+
+        if not aimLine then
+            aimLine = Instance.new("Part")
+            aimLine.Anchored = true
+            aimLine.CanCollide = false
+            aimLine.Material = Enum.Material.Neon
+            aimLine.Color = Color3.new(0, 1, 0) 
+            aimLine.Parent = workspace
+        end
+
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if aimViewerEnabled and selectedPlayer and selectedPlayer.Character then
+                local character = selectedPlayer.Character
+                local humanoidRoot = character:FindFirstChild("HumanoidRootPart")
+
+                local playerCamera = workspace.CurrentCamera
+                if humanoidRoot and selectedPlayer == game.Players.LocalPlayer then
+                    local headPosition = humanoidRoot.Position
+                    local lookVector = playerCamera.CFrame.LookVector
+                    local aimTarget = headPosition + (lookVector * 500)
+
+                    aimLine.Size = Vector3.new(0.1, 0.1, (headPosition - aimTarget).Magnitude)
+                    aimLine.CFrame = CFrame.new(headPosition, aimTarget) * CFrame.new(0, 0, -aimLine.Size.Z / 2)
+                elseif humanoidRoot then
+                    local headPosition = humanoidRoot.Position
+                    local cameraOffset = Vector3.new(0, 2, 0) 
+                    local lookVector = (character.HumanoidRootPart.CFrame.LookVector) 
+                    local aimTarget = (headPosition + cameraOffset) + (lookVector * 500)
+
+
+                    aimLine.Size = Vector3.new(0.1, 0.1, (headPosition - aimTarget).Magnitude)
+                    aimLine.CFrame = CFrame.new(headPosition + cameraOffset, aimTarget) * CFrame.new(0, 0, -aimLine.Size.Z / 2)
+                else
+                    notify("Error", "Player's camera or HumanoidRootPart not found!", 5)
+                    aimViewerEnabled = false
+                end
+            else
+                if aimLine then
+                    aimLine:Destroy()
+                    aimLine = nil
+                end
+            end
+        end)
+    else
+        notify("Aim Viewer Disabled", "Stopped tracking.", 5)
+
+        if aimLine then
+            aimLine:Destroy()
+            aimLine = nil
+        end
+    end
+end
+
+tarbox:AddInput('PlayerSearch', {
+    Default = '',
+    Numeric = false,
+    Finished = true, 
+    Placeholder = 'Enter player name...',
+    Text = 'player to target:',
+    Tooltip = 'Enter a partial or full player name to search',
+    Callback = function(input)
+        local closestMatch = findClosestMatch(input)
+        if closestMatch then
+            selectedPlayer = closestMatch
+            notify("Player Selected", "Selected: " .. closestMatch.Name, 5)
+        else
+            notify("Error", "No matching player found!", 5)
+        end
+    end,
+})
+
+
+tarbox:AddToggle('ViewPlayerToggle', {
+    Text = 'View Player',
+    Default = false,
+    Tooltip = 'Enable or disable viewing the selected player',
+    Callback = function(state)
+        if state then
+            toggleView()
+        else
+            if viewing then
+                toggleView()
+            end
+        end
+    end,
+})
+
+tarbox:AddToggle('AimViewerToggle', {
+    Text = 'Aim Viewer',
+    Default = false,
+    Tooltip = 'Enable or disable aim tracking for the selected player',
+    Callback = function(state)
+        if state then
+            toggleAimViewer()
+        else
+            if aimViewerEnabled then
+                toggleAimViewer()
+            end
+        end
+    end,
+})
+
+tarbox:AddButton('GoTo', function()
+    teleportToPlayer()
+end)
+
 
 local orbbox = GeneralTab:AddRightGroupbox("        Orbit AimLock")
 
@@ -933,7 +1114,7 @@ orbbox:AddDropdown("orbitBodyParts", {
 })
 
 
-local frabox = GeneralTab:AddLeftGroupbox("        Movement")
+local frabox = settingsTab:AddRightGroupbox("        Movement")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1036,7 +1217,7 @@ local function createSquare(color, size, outlineColor)
     return square
 end
 
-local espbox = GeneralTab:AddLeftGroupbox("esp")
+local espbox = settingsTab:AddRightGroupbox("esp")
 
 local function updateHealthBars()
     local cameraCFrame = Camera.CFrame
