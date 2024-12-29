@@ -280,7 +280,9 @@ local Window = Library:CreateWindow({
 local GeneralTab = Window:AddTab("Main")
 local aimbox = GeneralTab:AddRightGroupbox("           AimLock")
 local velbox = GeneralTab:AddRightGroupbox("        Anti Lock")
-local settingsTab = Window:AddTab("Other")
+local otherTab = Window:AddTab("game")
+local settingsTab = Window:AddTab("settings")
+
 
 
 ThemeManager:SetLibrary(Library)
@@ -753,6 +755,383 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, Index)
     return oldIndex(self, Index)
 end))
 
+
+
+local BulletTrace = otherTab:AddRightGroupbox("         bullet trace")
+
+local Settings = {
+    BulletTracers = false,
+    BulletTracersColor = Color3.new(1, 1, 1),
+    BulletTraceMaterial = "ForceField"
+}
+
+
+local function CreateBulletTracer(startPosition, endPosition)
+    if not Settings.BulletTracers then
+        return
+    end
+
+
+    local tracer = Instance.new("Part")
+    tracer.Anchored = true
+    tracer.CanCollide = false
+    tracer.Size = Vector3.new(0.2, 0.2, (endPosition - startPosition).Magnitude)
+    tracer.CFrame = CFrame.new(startPosition, endPosition) * CFrame.new(0, 0, -tracer.Size.Z / 2)
+
+    tracer.Color = Settings.BulletTracersColor
+
+    local validMaterials = {
+        ForceField = Enum.Material.ForceField,
+        SmoothPlastic = Enum.Material.SmoothPlastic,
+        Plastic = Enum.Material.Plastic,
+        Neon = Enum.Material.Neon,
+        Glass = Enum.Material.Glass,
+        Grass = Enum.Material.Grass,
+        Wood = Enum.Material.Wood,
+        Slate = Enum.Material.Slate,
+        Concrete = Enum.Material.Concrete,
+        CorrodedMetal = Enum.Material.CorrodedMetal,
+        DiamondPlate = Enum.Material.DiamondPlate,
+        Foil = Enum.Material.Foil,
+        Granite = Enum.Material.Granite,
+        Marble = Enum.Material.Marble,
+        Brick = Enum.Material.Brick,
+        Pebble = Enum.Material.Pebble,
+        Sand = Enum.Material.Sand,
+        Fabric = Enum.Material.Fabric,
+        Metal = Enum.Material.Metal,
+        Ice = Enum.Material.Ice
+    }
+
+    tracer.Material = validMaterials[Settings.BulletTraceMaterial] or Enum.Material.Plastic
+
+    tracer.Parent = workspace
+    game:GetService("Debris"):AddItem(tracer, 1) 
+end
+
+local function OnBulletTracersToggle(value)
+    Settings.BulletTracers = value
+end
+
+local function OnColorPickerChange(color)
+    Settings.BulletTracersColor = color
+end
+
+local function OnMaterialDropdownChange(material)
+    Settings.BulletTraceMaterial = material
+end
+
+BulletTrace:AddToggle('Bullet Tracers', {
+    Text = 'Enable',
+    Default = false,
+    Tooltip = 'Bullet Tracers',
+    Callback = OnBulletTracersToggle
+})
+
+BulletTrace:AddLabel('Bullet Color'):AddColorPicker('ColorPicker', {
+    Default = Color3.new(1, 1, 1),
+    Title = 'Bullet Color',
+    Transparency = 0,
+    Callback = OnColorPickerChange
+})
+
+BulletTrace:AddDropdown('Material', {
+    Values = {
+        'ForceField', 'SmoothPlastic', 'Plastic', 'Neon', 'Glass', 'Grass', 'Wood', 'Slate',
+        'Concrete', 'CorrodedMetal', 'DiamondPlate', 'Foil', 'Granite', 'Marble', 'Brick', 'Pebble',
+        'Sand', 'Fabric', 'Metal', 'Ice'
+    },
+    Default = 1, 
+    Multi = false,
+    Text = 'Bullet Tracers Material',
+    Tooltip = 'Material',
+    Callback = OnMaterialDropdownChange
+})
+
+
+CreateBulletTracer(Vector3.new(0, 10, 0), Vector3.new(10, 10, 10))
+
+
+OnBulletTracersToggle(true)
+OnColorPickerChange(Color3.new(0, 1, 0))
+OnMaterialDropdownChange("Neon")
+CreateBulletTracer(Vector3.new(0, 10, 0), Vector3.new(20, 10, 20))
+
+
+
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local RotationSpeed = 2000
+
+
+local Settings = {
+    CameraSpinEnabled = false,  
+    IsRotationActive = false,  
+    KeyRotationEnabled = false  
+}
+
+local TotalRotation = 0
+local LastRenderTime = tick()
+
+
+local spinbot = otherTab:AddLeftGroupbox("        spin bot")
+
+
+spinbot:AddToggle('CameraSpinToggle', {
+    Text = 'enable/disable spinbot',
+    Default = false,
+    Tooltip = 'makes ur camera go spinny spinny allowing u to kill everyone',
+    Callback = function(Value)
+        Settings.CameraSpinEnabled = Value
+        if not Value then
+            Settings.IsRotationActive = false
+        end
+    end
+})
+
+
+spinbot:AddToggle("KeyRotationToggle", {
+    Text = "spinbot keybind",
+    Default = false,
+    Tooltip = "Enables the key to toggle the spinbot",
+    Callback = function(Value)
+        Settings.KeyRotationEnabled = Value
+    end,
+}):AddKeyPicker("KeyRotationKeyPicker", {
+    Default = "Y",               
+    SyncToggleState = true,      
+    Mode = "Toggle",            
+    Text = "spinbot keybind",
+    Tooltip = "Key to toggle spinbot",
+    Callback = function()
+        if Settings.CameraSpinEnabled then
+            Settings.IsRotationActive = not Settings.IsRotationActive
+        end
+    end
+})
+
+
+spinbot:AddSlider("bot_speed", {
+    Text = "spinbot speed",
+    Default = 2000,
+    Min = 500,
+    Max = 5000,
+    Rounding = 2,
+    Tooltip = "the amount of seconds you will orbit around",
+    Callback = function(value)
+        RotationSpeed = value
+    end,
+})
+
+
+
+local function RotateCamera()
+    if Settings.CameraSpinEnabled and Settings.IsRotationActive then
+        local CurrentTime = tick()
+        local TimeDelta = math.min(CurrentTime - LastRenderTime, 0.01)
+        LastRenderTime = CurrentTime
+
+        local RotationAngle = RotationSpeed * TimeDelta
+        local Rotation = CFrame.fromAxisAngle(Vector3.new(0, 1, 0), math.rad(RotationAngle))
+        Camera.CFrame = Camera.CFrame * Rotation
+
+        TotalRotation = TotalRotation + RotationAngle
+        if TotalRotation >= 360 then
+            TotalRotation = 0
+        end
+    end
+end
+
+
+RunService.Heartbeat:Connect(function()
+    RotateCamera()
+end)
+
+local Settings = {
+    Bot = false,
+    Botmethod = "Tween",
+    ShowPath = false,
+    autoequipe = false,
+    equipeNumber = 1,
+    BulletTracers = false,
+}
+
+
+local plr = game.Players.LocalPlayer
+local plrs = game.Players
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local PathFolder = Instance.new("Folder", workspace)
+PathFolder.Name = "PathVisualization"
+
+
+local Bot = otherTab:AddLeftGroupbox("       Auto Bot")
+
+Bot:AddToggle('BotToggle', {
+    Text = 'Auto Bot',
+    Default = false,
+    Tooltip = 'Auto Finds players',
+    Callback = function(Value)
+        Settings.Bot = Value
+    end
+})
+
+Bot:AddDropdown('BotMethod', {
+    Values = { 'Tween', 'Walking' },
+    Default = 1, 
+    Multi = false,
+    Text = 'Bot Method',
+    Tooltip = 'Bot Method',
+    Callback = function(Value)
+        Settings.Botmethod = Value
+        BotMethodChanged = true  
+    end
+})
+
+Bot:AddToggle('ShowPathToggle', {
+    Text = 'Show Path',
+    Default = false,
+    Tooltip = 'Shows the path',
+    Callback = function(Value)
+        Settings.ShowPath = Value
+        if not Value then
+            PathFolder:ClearAllChildren()
+        end
+    end
+})
+
+Bot:AddToggle('AutoEquipToggle', {
+    Text = 'Auto Equip',
+    Default = false,
+    Tooltip = 'Equip tool automatically',
+    Callback = function(Value)
+        Settings.autoequipe = Value
+    end
+})
+
+Bot:AddDropdown('EquipToolDropdown', {
+    Values = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' },
+    Default = 1, 
+    Multi = false,
+    Text = 'Auto Equip Tool',
+    Tooltip = 'Choose tool to equip',
+    Callback = function(Value)
+        Settings.equipeNumber = tonumber(Value) 
+    end
+})
+
+
+local function ClosestPathfinding()
+    local Closest = nil
+    local Distance = math.huge
+    for _, v in ipairs(plrs:GetPlayers()) do
+        if v ~= plr and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
+            local hrp = v.Character:FindFirstChild("HumanoidRootPart")
+            local lhrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and lhrp then
+                local magnitude = (hrp.Position - lhrp.Position).Magnitude
+                if magnitude < Distance then
+                    Closest = hrp
+                    Distance = magnitude
+                end
+            end
+        end
+    end
+    return Closest
+end
+
+
+local function ShowPath(startPos, endPos)
+    PathFolder:ClearAllChildren() 
+
+    local part = Instance.new("Part", PathFolder)
+    part.Anchored = true
+    part.CanCollide = false
+    part.Size = Vector3.new(0.2, 0.2, (startPos - endPos).Magnitude)
+    part.CFrame = CFrame.new(startPos, endPos) * CFrame.new(0, 0, -(startPos - endPos).Magnitude / 2)
+    part.Color = Color3.new(0, 1, 1)
+    part.Material = Enum.Material.Neon
+end
+
+
+local BotMethodChanged = false
+
+
+local function BotMovement()
+    if not Settings.Bot then return end
+
+    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local ClosestPathFind = ClosestPathfinding()
+    if not ClosestPathFind then return end
+
+    if Settings.ShowPath then
+        ShowPath(hrp.Position, ClosestPathFind.Position)
+    else
+        PathFolder:ClearAllChildren()
+    end
+
+    if BotMethodChanged then
+        BotMethodChanged = false  
+        if Settings.Botmethod == "Tween" then
+            local duration = (ClosestPathFind.Position - hrp.Position).Magnitude * 0.1
+            local tween = TweenService:Create(
+                hrp,
+                TweenInfo.new(duration, Enum.EasingStyle.Linear),
+                { CFrame = ClosestPathFind.CFrame }
+            )
+            tween:Play()
+        elseif Settings.Botmethod == "Walking" then
+            local humanoid = plr.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid:MoveTo(ClosestPathFind.Position)
+            end
+        end
+    else
+
+        if Settings.Botmethod == "Walking" then
+            local humanoid = plr.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid:MoveTo(ClosestPathFind.Position)
+            end
+        elseif Settings.Botmethod == "Tween" then
+            local duration = (ClosestPathFind.Position - hrp.Position).Magnitude * 0.1
+            local tween = TweenService:Create(
+                hrp,
+                TweenInfo.new(duration, Enum.EasingStyle.Linear),
+                { CFrame = ClosestPathFind.CFrame }
+            )
+            tween:Play()
+        end
+    end
+end
+
+
+local function AutoEquip()
+    if Settings.autoequipe then
+        local tool = plr.Backpack:GetChildren()[Settings.equipeNumber]
+        if tool then
+            plr.Character.Humanoid:EquipTool(tool)
+        end
+    end
+end
+
+
+UserInputService.InputBegan:Connect(function(input)
+    if Settings.BulletTracers and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        print("Bullet tracer logic triggered.") 
+    end
+end)
+
+
+RunService.Heartbeat:Connect(function()
+    BotMovement()
+    AutoEquip()
+end)
+
 local tarbox = GeneralTab:AddLeftGroupbox("          target")
 
 local function notify(title, text, duration)
@@ -786,7 +1165,6 @@ local function findClosestMatch(input)
     return closestMatch
 end
 
-
 local viewing = false
 
 local function toggleView()
@@ -817,7 +1195,6 @@ local function teleportToPlayer()
         notify("Error", "Target not valid!", 5)
     end
 end
-
 
 local aimViewerEnabled = false
 local aimLine = nil
@@ -861,7 +1238,6 @@ local function toggleAimViewer()
                     local lookVector = (character.HumanoidRootPart.CFrame.LookVector) 
                     local aimTarget = (headPosition + cameraOffset) + (lookVector * 500)
 
-
                     aimLine.Size = Vector3.new(0.1, 0.1, (headPosition - aimTarget).Magnitude)
                     aimLine.CFrame = CFrame.new(headPosition + cameraOffset, aimTarget) * CFrame.new(0, 0, -aimLine.Size.Z / 2)
                 else
@@ -885,6 +1261,61 @@ local function toggleAimViewer()
     end
 end
 
+local strafeEnabled = false
+local collisionDisabled = false
+
+local function toggleStrafe()
+    if not selectedPlayer then
+        notify("Error", "No player selected!", 5)
+        return
+    end
+
+    strafeEnabled = not strafeEnabled
+
+    if strafeEnabled then
+        notify("Strafe Enabled", "Strafing around: " .. selectedPlayer.Name, 5)
+
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+            collisionDisabled = true
+        end
+
+        game:GetService("RunService").Heartbeat:Connect(function()
+            if strafeEnabled and selectedPlayer and selectedPlayer.Character then
+                local targetHead = selectedPlayer.Character:FindFirstChild("Head")
+                local playerRoot = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+                if targetHead and playerRoot then
+                    local time = tick() * 10 
+                    local strafeRadius = 5 
+                    local heightOffset = Vector3.new(0, 3, 0) 
+                    local offset = Vector3.new(math.cos(time) * strafeRadius, 0, math.sin(time) * strafeRadius)
+                    playerRoot.CFrame = CFrame.new(targetHead.Position + heightOffset + offset, targetHead.Position)
+                end
+            end
+        end)
+    else
+        notify("Strafe Disabled", "Stopped strafing.", 5)
+
+        if collisionDisabled then
+            local character = game.Players.LocalPlayer.Character
+            if character then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+            collisionDisabled = false
+        end
+    end
+end
+
 tarbox:AddInput('PlayerSearch', {
     Default = '',
     Numeric = false,
@@ -902,7 +1333,6 @@ tarbox:AddInput('PlayerSearch', {
         end
     end,
 })
-
 
 tarbox:AddToggle('ViewPlayerToggle', {
     Text = 'View Player',
@@ -934,6 +1364,21 @@ tarbox:AddToggle('AimViewerToggle', {
     end,
 })
 
+tarbox:AddToggle('StrafeToggle', {
+    Text = 'Strafe',
+    Default = false,
+    Tooltip = 'spin around the player',
+    Callback = function(state)
+        if state then
+            toggleStrafe()
+        else
+            if strafeEnabled then
+                toggleStrafe()
+            end
+        end
+    end,
+})
+
 tarbox:AddButton('GoTo', function()
     teleportToPlayer()
 end)
@@ -955,6 +1400,8 @@ local bodyPartSelected = "Head"
 local isOrbiting = false
 local orbitDuration = 2 
 local orbitDistance = 5 
+local tpBackEnabled = false
+local savedPosition = nil
 
 local function getBodyPart(character, part)
     return character:FindFirstChild(part) and part or "Head"
@@ -989,15 +1436,26 @@ local function orbitCharacter(target, duration)
     local humanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local targetPart = target.Character:FindFirstChild("HumanoidRootPart")
 
+    if tpBackEnabled and humanoidRootPart then
+        savedPosition = humanoidRootPart.CFrame
+    end
+
     if humanoidRootPart and targetPart then
         humanoidRootPart.CanCollide = false
 
         local startTime = tick()
-        RunService.RenderStepped:Connect(function()
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
             if tick() - startTime > duration then
                 humanoidRootPart.CanCollide = true
                 isOrbiting = false
                 isLockedOn = false
+
+                if tpBackEnabled and savedPosition then
+                    humanoidRootPart.CFrame = savedPosition
+                end
+
+                connection:Disconnect()
                 return
             end
 
@@ -1041,7 +1499,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-
 orbbox:AddToggle("orbitAimLock_Enabled", {
     Text = "Enable/Disable Orbit AimLock",
     Default = false,
@@ -1078,6 +1535,16 @@ orbbox:AddToggle("orbitEnabled", {
     end,
 })
 
+orbbox:AddToggle("tpBackToPosition", {
+    Text = "TP Back to Position",
+    Default = false,
+    Tooltip = "Save your position before orbiting and teleport back when done.",
+    Callback = function(value)
+        tpBackEnabled = value
+    end,
+})
+
+
 orbbox:AddSlider("Orbit_timer", {
     Text = "Orbit Interval (sec)",
     Default = 2,
@@ -1102,6 +1569,7 @@ orbbox:AddSlider("Orbit_studs", {
     end,
 })
 
+
 orbbox:AddDropdown("orbitBodyParts", {
     Values = {"Head", "UpperTorso", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg", "LeftUpperArm"},
     Default = "Head",
@@ -1114,7 +1582,7 @@ orbbox:AddDropdown("orbitBodyParts", {
 })
 
 
-local frabox = settingsTab:AddRightGroupbox("        Movement")
+local frabox = otherTab:AddRightGroupbox("          Movement")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1217,7 +1685,7 @@ local function createSquare(color, size, outlineColor)
     return square
 end
 
-local espbox = settingsTab:AddRightGroupbox("esp")
+local espbox = otherTab:AddRightGroupbox("esp")
 
 local function updateHealthBars()
     local cameraCFrame = Camera.CFrame
