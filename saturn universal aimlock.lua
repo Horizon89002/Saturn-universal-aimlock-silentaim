@@ -367,83 +367,136 @@ aimbox:AddDropdown("BodyParts", {
 
 local reverseResolveIntensity = 5
 getgenv().Desync = false
-getgenv().DesyncEnabled = false  
+getgenv().DesyncEnabled = false
+local hip = 2.80
+local val = -35
+local selectedMode = "Velocity"
+
+
+local function applyVelocityDesync()
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return end 
+
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+
+    local originalVelocity = humanoidRootPart.Velocity
+
+    local randomOffset = Vector3.new(
+        math.random(-1, 1) * reverseResolveIntensity * 1000,
+        math.random(-1, 1) * reverseResolveIntensity * 1000,
+        math.random(-1, 1) * reverseResolveIntensity * 1000
+    )
+
+    humanoidRootPart.Velocity = randomOffset
+    humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(
+        0,
+        math.random(-1, 1) * reverseResolveIntensity * 0.001,
+        0
+    )
+
+    game:GetService("RunService").RenderStepped:Wait()
+
+    humanoidRootPart.Velocity = originalVelocity
+end
+
+
+local function applyHipHeightAdjustment()
+    local player = game.Players.LocalPlayer
+    local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    local oldVelocity = rootPart.Velocity
+    rootPart.Velocity = Vector3.new(oldVelocity.X, val, oldVelocity.Z)
+    player.Character.Humanoid.HipHeight = hip
+end
 
 
 game:GetService("RunService").Heartbeat:Connect(function()
-    if getgenv().DesyncEnabled then  
-        if getgenv().Desync then
-            local player = game.Players.LocalPlayer
-            local character = player.Character
-            if not character then return end 
-
-            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-            if not humanoidRootPart then return end
-
-            local originalVelocity = humanoidRootPart.Velocity
-
-            local randomOffset = Vector3.new(
-                math.random(-1, 1) * reverseResolveIntensity * 1000,
-                math.random(-1, 1) * reverseResolveIntensity * 1000,
-                math.random(-1, 1) * reverseResolveIntensity * 1000
-            )
-
-            humanoidRootPart.Velocity = randomOffset
-            humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(
-                0,
-                math.random(-1, 1) * reverseResolveIntensity * 0.001,
-                0
-            )
-
-            game:GetService("RunService").RenderStepped:Wait()
-
-            humanoidRootPart.Velocity = originalVelocity
+    if getgenv().DesyncEnabled and getgenv().Desync then
+        if selectedMode == "Velocity" then
+            applyVelocityDesync()
+        elseif selectedMode == "Hip Height" then
+            applyHipHeightAdjustment()
         end
     end
 end)
 
 velbox:AddToggle("desyncMasterEnabled", {
-    Text = "Enable Desync",
+    Text = "Enable Anti Lock",
     Default = false,
-    Tooltip = "Enable or disable the entire desync system.",
+    Tooltip = "enable/disable anti lock",
     Callback = function(value)
-        getgenv().DesyncEnabled = value  
-    end
+        getgenv().DesyncEnabled = value
+    end,
 })
 
 
 velbox:AddToggle("desyncEnabled", {
-    Text = "Desync keybind",
+    Text = "Anti Lock keybind",
     Default = false,
-    Tooltip = "Enable or disable reverse resolve desync.",
+    Tooltip = "turn it on/off",
     Callback = function(value)
         getgenv().Desync = value
-    end
+    end,
 }):AddKeyPicker("desyncToggleKey", {
     Default = "V", 
     SyncToggleState = true,
     Mode = "Toggle",
     Text = "Desync Toggle Key",
-    Tooltip = "Toggle to enable/disable velocity desync.",
+    Tooltip = "the keybind",
     Callback = function(value)
         getgenv().Desync = value
-    end
+    end,
+})
+
+velbox:AddDropdown("DesyncMode", {
+    Values = {"Velocity spoof", "Hip Height spoof"},
+    Default = "Velocity spoof",
+    Multi = false,
+    Text = "method",
+    Tooltip = "select anti lock method",
+    Callback = function(value)
+        selectedMode = value
+    end,
 })
 
 
 velbox:AddSlider("ReverseResolveIntensity", {
-    Text = "velocity intensity",
+    Text = "Velocity amount",
     Default = 5,
     Min = 1,
     Max = 10,
     Rounding = 0,
-    Tooltip = "Adjust the intensity of the reverse resolve effect.",
+    Tooltip = "amount of velocity spoof",
     Callback = function(value)
         reverseResolveIntensity = value
-    end
+    end,
 })
 
+velbox:AddSlider("hipset", {
+    Text = "Hip Height",
+    Default = 2.8,
+    Min = 0.6,
+    Max = 10,
+    Rounding = 1,
+    Tooltip = "hip height spoofer amount, DONT touch if you dont know shit",
+    Callback = function(value)
+        hip = value
+    end,
+})
 
+velbox:AddSlider("velset", {
+    Text = "Vertical Velocity",
+    Default = -35,
+    Min = -100,
+    Max = 1,
+    Rounding = 2,
+    Tooltip = "hip height spoofers vertical velocity, DONT touch if you dont know shit",
+    Callback = function(value)
+        val = value
+    end,
+})
 
 local antiLockEnabled = false
 local resolverIntensity = 1.0
