@@ -7,6 +7,212 @@ if not syn or not protectgui then
 end
 
  
+local Background = Instance.new("ScreenGui")
+local Frame = Instance.new("ImageLabel")
+local Frame_2 = Instance.new("ImageLabel")
+local Title = Instance.new("TextLabel")
+local Text = Instance.new("ScreenGui")
+local TextUI = Instance.new("Frame")
+local Loading = Instance.new("TextLabel")
+local Image = Instance.new("ScreenGui")
+local Warper = Instance.new("Frame")
+local Animated = Instance.new("ImageLabel")
+
+
+Background.Name = "Background"
+Background.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+
+Frame.Name = "Frame"
+Frame.Parent = Background   
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame.BackgroundTransparency = 0.8
+Frame.BorderSizePixel = 0
+Frame.Position = UDim2.new(0.5, 0, 0.464705884, 0)
+Frame.Size = UDim2.new(0, 320, 0, 520)
+Frame.Image = "rbxassetid://3570695787"
+Frame.ImageColor3 = Color3.fromRGB(30, 30, 30)
+Frame.ImageTransparency = 0.5
+Frame.ScaleType = Enum.ScaleType.Slice
+Frame.SliceCenter = Rect.new(100, 100, 100, 100)
+Frame.SliceScale = 0.150
+
+
+local corner1 = Instance.new("UICorner")
+corner1.CornerRadius = UDim.new(0, 20)  
+corner1.Parent = Frame
+
+
+Frame_2.Name = "Frame"
+Frame_2.Parent = Background
+Frame_2.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame_2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame_2.BackgroundTransparency = 0.8
+Frame_2.BorderSizePixel = 0
+Frame_2.Position = UDim2.new(0.5, 0, 0.464705884, 0)
+Frame_2.Size = UDim2.new(0, 300, 0, 500)
+Frame_2.Image = "rbxassetid://3570695787"
+Frame_2.ImageColor3 = Color3.fromRGB(20, 20, 20)
+Frame_2.ImageTransparency = 0.4
+Frame_2.ScaleType = Enum.ScaleType.Slice
+Frame_2.SliceCenter = Rect.new(100, 100, 100, 100)
+Frame_2.SliceScale = 0.150
+
+
+local corner2 = Instance.new("UICorner")
+corner2.CornerRadius = UDim.new(0, 20)  
+corner2.Parent = Frame_2
+
+
+Title.Name = "Title"
+Title.Parent = Frame_2
+Title.AnchorPoint = Vector2.new(0.5, 0.5)
+Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1.000
+Title.BorderSizePixel = 0
+Title.Position = UDim2.new(0.5, 0, 0.0930555537, 0)
+Title.Size = UDim2.new(1, 0, 0.186111107, 0)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "| Saturn v1.2 |"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 50.000
+Title.TextStrokeTransparency = 0.750
+Title.TextTransparency = 0.001
+
+
+Text.Name = "Text"
+Text.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+Text.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+TextUI.Name = "TextUI"
+TextUI.Parent = Text
+TextUI.AnchorPoint = Vector2.new(0.5, 0.5)
+TextUI.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextUI.BackgroundTransparency = 1.000
+TextUI.Position = UDim2.new(0.5, 0, 0.699999988, 0)
+TextUI.Size = UDim2.new(0, 300, 0, 37)
+
+Loading.Name = "| Loading |"
+Loading.Parent = TextUI
+Loading.AnchorPoint = Vector2.new(0.5, 0.5)
+Loading.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Loading.BackgroundTransparency = 1.000
+Loading.BorderSizePixel = 0
+Loading.Position = UDim2.new(0.5, 0, 0, 0)
+Loading.Size = UDim2.new(1, 0, 1, 0)
+Loading.Font = Enum.Font.SourceSansBold
+Loading.Text = ""
+Loading.TextColor3 = Color3.fromRGB(255, 255, 255)
+Loading.TextSize = 30.000
+Loading.TextStrokeTransparency = 0.750
+Loading.TextTransparency = 0.001
+
+
+Image.Name = "Image"
+Image.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+Image.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+Warper.Name = "Warper"
+Warper.Parent = Image
+Warper.AnchorPoint = Vector2.new(0.5, 0.5)
+Warper.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Warper.BackgroundTransparency = 1.000
+Warper.ClipsDescendants = true
+Warper.Position = UDim2.new(0.5, 0, 0.449999988, 0)
+Warper.Size = UDim2.new(0, 200, 0, 200)
+
+Animated.Name = "Animated"
+Animated.Parent = Warper
+Animated.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Animated.BackgroundTransparency = 1.000
+Animated.Size = UDim2.new(1, 0, 1, 0)
+Animated.Image = "http://www.roblox.com/asset/?id=12998277905"
+Animated.ImageTransparency = 0.001
+
+
+local function LoadingScript()
+    local plr = game.Players.LocalPlayer.Name
+    local texts = {"| Loading |", "| Loading. |", "| Loading.. |", "| Loading... |", "Welcome, " .. plr .. "!"}
+    for i = 1, #texts do
+        Loading.Text = texts[i]
+        wait(0.5)
+    end
+end
+
+
+local function AnimationScript()
+    local warperFramerate = 30
+    local lastFrame = 1
+    local frames = 32
+    local rows = 6
+    local columns = 6
+
+    local AnimationFrameWrapper = Warper
+    local AnimatedSprite = AnimationFrameWrapper.Animated
+
+    local t = tick()
+    AnimatedSprite.Size = UDim2.new(columns, 0, rows, 0)
+
+    local function UpdateWarper()
+        if tick() - t >= 1 / warperFramerate then
+            lastFrame = lastFrame + 1
+            if lastFrame > frames then lastFrame = 1 end
+
+            local CurrentColumn = lastFrame
+            local CurrentRow = 1
+            repeat
+                if CurrentColumn > columns then
+                    CurrentColumn = CurrentColumn - columns
+                    CurrentRow = CurrentRow + 1
+                end
+            until not (CurrentColumn > columns)
+
+            AnimatedSprite.Position = UDim2.new(-(CurrentColumn - 1), 0, -(CurrentRow - 1), 0)
+            t = tick()
+        end
+    end
+
+    game:GetService("RunService").RenderStepped:Connect(UpdateWarper)
+end
+
+
+local function BlurScript()
+    getgenv().bgblur = Instance.new("BlurEffect", game.Lighting)
+    getgenv().bgblur.Size = 20
+    wait(2)
+    for i = 20, 0, -1 do
+        getgenv().bgblur.Size = i
+        wait(0.04)
+    end
+    getgenv().bgblur:Destroy()
+end
+
+
+local function FadeOut()
+    for transparency = 0, 1, 0.1 do
+        Frame.ImageTransparency = transparency
+        Frame_2.ImageTransparency = transparency
+        Animated.ImageTransparency = transparency
+        Title.TextStrokeTransparency = transparency
+        Title.TextTransparency = transparency
+        Loading.TextTransparency = transparency
+        Loading.TextStrokeTransparency = transparency
+        wait(0.04)
+    end
+    Background:Destroy()
+    Text:Destroy()
+    Image:Destroy()
+end
+
+
+coroutine.wrap(LoadingScript)()
+coroutine.wrap(AnimationScript)()
+coroutine.wrap(BlurScript)()
+
+wait(3)
+FadeOut()
+
 
 
 local SilentAimSettings = {
@@ -370,8 +576,21 @@ getgenv().Desync = false
 getgenv().DesyncEnabled = false
 local hip = 2.80
 local val = -35
-local selectedMode = "Velocity"
+local selectedMode = "Velocity spoof"  
 
+local defaultHipHeight = 2.0  
+
+local function clearVelocityAndEffects()
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return end 
+
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+
+    humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+    humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(0, 0, 0)
+end
 
 local function applyVelocityDesync()
     local player = game.Players.LocalPlayer
@@ -401,23 +620,44 @@ local function applyVelocityDesync()
     humanoidRootPart.Velocity = originalVelocity
 end
 
-
 local function applyHipHeightAdjustment()
     local player = game.Players.LocalPlayer
-    local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    local oldVelocity = rootPart.Velocity
-    rootPart.Velocity = Vector3.new(oldVelocity.X, val, oldVelocity.Z)
-    player.Character.Humanoid.HipHeight = hip
+    local character = player.Character
+    if not character then return end 
+
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoidRootPart or not humanoid then return end
+
+
+    local oldVelocity = humanoidRootPart.Velocity
+    humanoidRootPart.Velocity = Vector3.new(oldVelocity.X, val, oldVelocity.Z)
+    
+    humanoid.HipHeight = hip
 end
 
+local function resetHipHeight()
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return end 
+
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+
+        humanoid.HipHeight = defaultHipHeight
+    end
+end
 
 game:GetService("RunService").Heartbeat:Connect(function()
     if getgenv().DesyncEnabled and getgenv().Desync then
-        if selectedMode == "Velocity" then
+        if selectedMode == "Velocity spoof" then
             applyVelocityDesync()
-        elseif selectedMode == "Hip Height" then
+        elseif selectedMode == "Hip Height spoof" then
             applyHipHeightAdjustment()
+        end
+    else
+        if selectedMode == "Hip Height spoof" then
+            resetHipHeight()  
         end
     end
 end)
@@ -425,28 +665,33 @@ end)
 velbox:AddToggle("desyncMasterEnabled", {
     Text = "Enable Anti Lock",
     Default = false,
-    Tooltip = "enable/disable anti lock",
+    Tooltip = "Enable/disable anti-lock",
     Callback = function(value)
         getgenv().DesyncEnabled = value
     end,
 })
 
-
 velbox:AddToggle("desyncEnabled", {
     Text = "Anti Lock keybind",
     Default = false,
-    Tooltip = "turn it on/off",
+    Tooltip = "Turn it on/off",
     Callback = function(value)
         getgenv().Desync = value
+        if not value then
+            resetHipHeight()  
+        end
     end,
 }):AddKeyPicker("desyncToggleKey", {
     Default = "V", 
     SyncToggleState = true,
     Mode = "Toggle",
     Text = "Desync Toggle Key",
-    Tooltip = "the keybind",
+    Tooltip = "The keybind to toggle desync",
     Callback = function(value)
         getgenv().Desync = value
+        if not value then
+            resetHipHeight()  
+        end
     end,
 })
 
@@ -454,13 +699,19 @@ velbox:AddDropdown("DesyncMode", {
     Values = {"Velocity spoof", "Hip Height spoof"},
     Default = "Velocity spoof",
     Multi = false,
-    Text = "method",
-    Tooltip = "select anti lock method",
+    Text = "Method",
+    Tooltip = "Select anti-lock method",
     Callback = function(value)
         selectedMode = value
+
+        if selectedMode == "Hip Height spoof" then
+            getgenv().Desync = false  
+            clearVelocityAndEffects() 
+        elseif selectedMode == "Velocity spoof" then
+            getgenv().Desync = true  
+        end
     end,
 })
-
 
 velbox:AddSlider("ReverseResolveIntensity", {
     Text = "Velocity amount",
@@ -468,7 +719,7 @@ velbox:AddSlider("ReverseResolveIntensity", {
     Min = 1,
     Max = 10,
     Rounding = 0,
-    Tooltip = "amount of velocity spoof",
+    Tooltip = "Amount of velocity spoof",
     Callback = function(value)
         reverseResolveIntensity = value
     end,
@@ -480,7 +731,7 @@ velbox:AddSlider("hipset", {
     Min = 0.6,
     Max = 10,
     Rounding = 1,
-    Tooltip = "hip height spoofer amount, DONT touch if you dont know shit",
+    Tooltip = "Hip height spoofer amount, don't touch if you don't know what you're doing",
     Callback = function(value)
         hip = value
     end,
@@ -492,7 +743,7 @@ velbox:AddSlider("velset", {
     Min = -100,
     Max = 1,
     Rounding = 2,
-    Tooltip = "hip height spoofers vertical velocity, DONT touch if you dont know shit",
+    Tooltip = "Hip height spoofers vertical velocity, don't touch if you don't know what you're doing",
     Callback = function(value)
         val = value
     end,
@@ -1174,8 +1425,7 @@ end
 
 
 UserInputService.InputBegan:Connect(function(input)
-    if Settings.BulletTracers and input.UserInputType == Enum.UserInputType.MouseButton1 then
-        print("Bullet tracer logic triggered.") 
+        if Settings.BulletTracers and input.UserInputType == Enum.UserInputType.MouseButton1 then
     end
 end)
 
