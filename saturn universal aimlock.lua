@@ -1152,15 +1152,120 @@ BulletTrace:AddDropdown('Material', {
     Callback = OnMaterialDropdownChange
 })
 
-
 CreateBulletTracer(Vector3.new(0, 10, 0), Vector3.new(10, 10, 10))
-
-
 OnBulletTracersToggle(true)
 OnColorPickerChange(Color3.new(0, 1, 0))
 OnMaterialDropdownChange("Neon")
 CreateBulletTracer(Vector3.new(0, 10, 0), Vector3.new(20, 10, 20))
 
+
+
+
+local extbox = otherTab:AddRightGroupbox("              extras")
+
+extbox:AddButton('Force Reset', function()
+    local player = game.Players.LocalPlayer
+    if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid.Health = 0
+    end
+end)
+
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+
+extbox:AddButton('rejoin', function()
+    local player = Players.LocalPlayer
+    if player then
+        local currentPlaceID = game.PlaceId
+        TeleportService:Teleport(currentPlaceID, player)
+    end
+end)
+
+extbox:AddButton('Leave', function()
+    game:Shutdown()
+end)
+
+local voidProtectionEnabled = false
+
+
+local function ToggleVoidProtection(bool)
+    if bool then
+        game.Workspace.FallenPartsDestroyHeight = 0/0  
+    else
+        game.Workspace.FallenPartsDestroyHeight = -500  
+    end
+end
+
+
+extbox:AddToggle('VoidProtectionToggle', {
+    Text = 'Anti Void',
+    Default = false,
+    Tooltip = 'When enabled, parts will not be destroyed when falling into the void.',
+    Callback = function(Value)
+        voidProtectionEnabled = Value
+        ToggleVoidProtection(voidProtectionEnabled) 
+    end
+})
+
+
+local Services = setmetatable({}, {__index = function(Self, Index)
+    local NewService = game.GetService(game, Index)
+    if NewService then
+        Self[Index] = NewService
+    end
+    return NewService
+end})
+
+
+local LocalPlayer = Services.Players.LocalPlayer
+
+
+local antiFlingEnabled = false
+local LastPosition = nil
+local antiFlingConnection = nil
+
+
+
+
+local function EnableAntiFling()
+    antiFlingConnection = Services.RunService.Heartbeat:Connect(function()
+        pcall(function()
+            local PrimaryPart = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
+            if PrimaryPart then
+                if PrimaryPart.AssemblyLinearVelocity.Magnitude > 250 or PrimaryPart.AssemblyAngularVelocity.Magnitude > 250 then
+                    PrimaryPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    PrimaryPart.CFrame = LastPosition
+                elseif PrimaryPart.AssemblyLinearVelocity.Magnitude < 50 or PrimaryPart.AssemblyAngularVelocity.Magnitude < 50 then
+                    LastPosition = PrimaryPart.CFrame
+                end
+            end
+        end)
+    end)
+end
+
+
+local function DisableAntiFling()
+    if antiFlingConnection then
+        antiFlingConnection:Disconnect()
+        antiFlingConnection = nil
+    end
+end
+
+
+extbox:AddToggle('AntiFlingToggle', {
+    Text = 'Anti Fling',
+    Default = false,
+    Tooltip = 'Prevents you from being flung.',
+    Callback = function(Value)
+        antiFlingEnabled = Value
+        if antiFlingEnabled then
+            EnableAntiFling()  
+        else
+            DisableAntiFling() 
+        end
+    end
+})
 
 
 local Camera = workspace.CurrentCamera
