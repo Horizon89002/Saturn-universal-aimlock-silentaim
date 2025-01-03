@@ -1918,6 +1918,7 @@ local isOrbiting = false
 local orbitDuration = 2 
 local orbitDistance = 5 
 local tpBackEnabled = false
+local viewPlayerEnabled = false
 local savedPosition = nil
 
 local function getBodyPart(character, part)
@@ -1946,6 +1947,30 @@ local function getNearestPlayerToMouse()
     return nearestPlayer
 end
 
+local function setCameraToPlayer(target)
+    if target and target.Character then
+        local targetCamera = target.Character:FindFirstChild("HumanoidRootPart")
+        if targetCamera then
+            Camera.CameraSubject = target.Character:FindFirstChildOfClass("Humanoid")
+            Camera.CameraType = Enum.CameraType.Custom
+        end
+    end
+end
+
+local function resetCamera()
+    Camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    Camera.CameraType = Enum.CameraType.Custom
+end
+
+local function orbitUpdate(humanoidRootPart, targetPart, startTime, connection)
+    local angle = (tick() - startTime) * math.pi * 2 * 5 
+    local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * orbitDistance
+    humanoidRootPart.CFrame = CFrame.new(targetPart.Position + offset)
+    if not viewPlayerEnabled then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+    end
+end
+
 local function orbitCharacter(target, duration)
     if not target or not target.Character then return end
 
@@ -1960,6 +1985,10 @@ local function orbitCharacter(target, duration)
     if humanoidRootPart and targetPart then
         humanoidRootPart.CanCollide = false
 
+        if viewPlayerEnabled then
+            setCameraToPlayer(target)
+        end
+
         local startTime = tick()
         local connection
         connection = RunService.RenderStepped:Connect(function()
@@ -1967,19 +1996,17 @@ local function orbitCharacter(target, duration)
                 humanoidRootPart.CanCollide = true
                 isOrbiting = false
                 isLockedOn = false
-
+                
                 if tpBackEnabled and savedPosition then
                     humanoidRootPart.CFrame = savedPosition
                 end
-
+                
+                resetCamera()
                 connection:Disconnect()
                 return
             end
 
-            local angle = (tick() - startTime) * math.pi * 2 * 5 
-            local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * orbitDistance
-            humanoidRootPart.CFrame = CFrame.new(targetPart.Position + offset)
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+            orbitUpdate(humanoidRootPart, targetPart, startTime, connection)
         end)
     end
 end
@@ -1990,6 +2017,7 @@ local function toggleLockOnPlayer()
     if isLockedOn then
         isLockedOn = false
         targetPlayer = nil
+        resetCamera()
     else
         targetPlayer = getNearestPlayerToMouse()
         if targetPlayer and targetPlayer.Character then
@@ -2008,7 +2036,9 @@ RunService.RenderStepped:Connect(function()
         local part = targetPlayer.Character:FindFirstChild(partName)
 
         if part and targetPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+            if not viewPlayerEnabled then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+            end
         else
             isLockedOn = false
             targetPlayer = nil
@@ -2051,6 +2081,20 @@ orbbox:AddToggle("orbitEnabled", {
         toggleLockOnPlayer()
     end,
 })
+
+
+orbbox:AddToggle("viewPlayer", {
+    Text = "View Player",
+    Default = false,
+    Tooltip = "When enabled, view the player while orbiting",
+    Callback = function(value)
+        viewPlayerEnabled = value
+        if not value then
+            resetCamera()
+        end
+    end,
+})
+
 
 orbbox:AddToggle("tpBackToPosition", {
     Text = "TP Back to Position",
@@ -2384,40 +2428,39 @@ espbox:AddToggle("EnableESP", {
 })
 
 
-local localPlayer = game:GetService("Players").LocalPlayer
-local Cmultiplier = 1  
-local isSpeedActive = false
-local isFunctionalityEnabled = false
-
+local SpeedController = {
+    localPlayer = game:GetService("Players").LocalPlayer,
+    Cmultiplier = 1,
+    isSpeedActive = false,
+    isFunctionalityEnabled = false,
+}
 
 frabox:AddToggle("functionalityEnabled", {
-    Text = "Enable/Disable CFrame Speed",
+    Text = "Enable/Disable Speed",
     Default = false,
     Tooltip = "Enable or disable the speed thingy.",
     Callback = function(value)
-        isFunctionalityEnabled = value
+        SpeedController.isFunctionalityEnabled = value
     end
 })
-
 
 frabox:AddToggle("speedEnabled", {
     Text = "Speed Toggle",
     Default = false,
     Tooltip = "It makes you go fast.",
     Callback = function(value)
-        isSpeedActive = value
+        SpeedController.isSpeedActive = value
     end
 }):AddKeyPicker("speedToggleKey", {
-    Default = "C",  
+    Default = "C",
     SyncToggleState = true,
     Mode = "Toggle",
     Text = "Speed KeyBind",
     Tooltip = "CFrame keybind.",
     Callback = function(value)
-        isSpeedActive = value
+        SpeedController.isSpeedActive = value
     end
 })
-
 
 frabox:AddSlider("cframespeed", {
     Text = "CFrame Multiplier",
@@ -2427,25 +2470,27 @@ frabox:AddSlider("cframespeed", {
     Rounding = 1,
     Tooltip = "The CFrame speed.",
     Callback = function(value)
-        Cmultiplier = value
+        SpeedController.Cmultiplier = value
     end,
 })
 
 
-while true do
-    task.wait()
-
-    if isFunctionalityEnabled then
-        if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local humanoid = localPlayer.Character:FindFirstChild("Humanoid")
-
-            if isSpeedActive and humanoid and humanoid.MoveDirection.Magnitude > 0 then
-                local moveDirection = humanoid.MoveDirection.Unit
-                localPlayer.Character.HumanoidRootPart.CFrame = localPlayer.Character.HumanoidRootPart.CFrame + moveDirection * Cmultiplier
+task.spawn(function()
+    while true do
+        task.wait()
+        
+        if SpeedController.isFunctionalityEnabled then
+            local character = SpeedController.localPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local humanoid = character:FindFirstChild("Humanoid")
+                if SpeedController.isSpeedActive and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                    local moveDirection = humanoid.MoveDirection.Unit
+                    character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame + moveDirection * SpeedController.Cmultiplier
+                end
             end
         end
     end
-end
+end)
 
 
 ThemeManager:LoadDefaultTheme()
