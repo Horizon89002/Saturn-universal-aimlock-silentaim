@@ -552,7 +552,7 @@ aimbox:AddSlider("Prediction", {
     Default = 0.0,
     Min = 0,
     Max = 2,
-    Rounding = 2,
+    Rounding = 5,
     Tooltip = "Adjust prediction for target movement.",
     Callback = function(value)
         predictionFactor = value
