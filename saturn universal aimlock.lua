@@ -1161,7 +1161,7 @@ CreateBulletTracer(Vector3.new(0, 10, 0), Vector3.new(20, 10, 20))
 
 
 
-local extbox = otherTab:AddRightGroupbox("              extras")
+local extbox = otherTab:AddRightGroupbox("            extras")
 
 extbox:AddButton('Force Reset', function()
     local player = game.Players.LocalPlayer
@@ -1205,6 +1205,115 @@ extbox:AddToggle('VoidProtectionToggle', {
         voidProtectionEnabled = Value
         ToggleVoidProtection(voidProtectionEnabled) 
     end
+})
+
+
+local sldbox = otherTab:AddLeftGroupbox("             Visuals")
+
+sldbox:AddSlider("world_fog", {
+    Text = "Fog Density",
+    Default = 0.5, 
+    Min = 0, 
+    Max = 1, 
+    Rounding = 2,
+    Tooltip = "Adjust the fog density",
+    Callback = function(value)
+        game.Lighting.FogEnd = value * 1000 
+        game.Lighting.FogStart = value * 500 
+    end,
+})
+
+sldbox:AddSlider("world_time", {
+    Text = "Clock Time",
+    Default = 12, 
+    Min = 0,
+    Max = 24, 
+    Rounding = 1,
+    Tooltip = "Adjust the time of day",
+    Callback = function(value)
+        game.Lighting.ClockTime = value 
+    end,
+})
+
+local camera = game.Workspace.CurrentCamera
+local function updateFOV(fovValue)
+    camera.FieldOfView = fovValue
+end
+
+
+sldbox:AddSlider("fov_slider", {
+    Text = "FOV",
+    Default = 70, 
+    Min = 30, 
+    Max = 120, 
+    Rounding = 2,
+    Tooltip = "adjust your field of view",
+    Callback = updateFOV
+})
+
+
+sldbox:AddToggle("nebula_theme", {
+    Text = "Nebula Theme",
+    Default = false,
+    Tooltip = "Toggle to transform your world into a stunning nebula them thingy",
+    Callback = function(state)
+        local lighting = game.Lighting
+
+        if state then
+            local bloom = lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect")
+            bloom.Intensity = 0.7 
+            bloom.Size = 24
+            bloom.Threshold = 1
+            bloom.Name = "NebulaBloom" 
+            bloom.Parent = lighting
+
+            local colorCorrection = lighting:FindFirstChild("NebulaColorCorrection") or Instance.new("ColorCorrectionEffect")
+            colorCorrection.Name = "NebulaColorCorrection"
+            colorCorrection.Saturation = 0.5
+            colorCorrection.Contrast = 0.2
+            colorCorrection.TintColor = Color3.fromRGB(173, 216, 230) 
+            colorCorrection.Parent = lighting
+
+            lighting.Ambient = Color3.fromRGB(70, 130, 180) 
+            lighting.OutdoorAmbient = Color3.fromRGB(100, 149, 237) 
+
+            local atmosphere = lighting:FindFirstChild("NebulaAtmosphere") or Instance.new("Atmosphere")
+            atmosphere.Name = "NebulaAtmosphere"
+            atmosphere.Density = 0.4
+            atmosphere.Offset = 0.25
+            atmosphere.Glare = 1
+            atmosphere.Haze = 2
+            atmosphere.Color = Color3.fromRGB(135, 206, 250) 
+            atmosphere.Decay = Color3.fromRGB(25, 25, 112) 
+            atmosphere.Parent = lighting
+
+            local starEmitter = workspace:FindFirstChild("NebulaStarEmitter") or Instance.new("ParticleEmitter")
+            starEmitter.Name = "NebulaStarEmitter"
+            starEmitter.Texture = "rbxassetid://124239974" 
+            starEmitter.Rate = 50
+            starEmitter.Lifetime = NumberRange.new(5, 10)
+            starEmitter.Speed = NumberRange.new(0, 0)
+            starEmitter.SpreadAngle = Vector2.new(360, 360)
+            starEmitter.Parent = workspace
+
+        else
+            local bloom = lighting:FindFirstChild("NebulaBloom")
+            if bloom then bloom:Destroy() end
+
+            local colorCorrection = lighting:FindFirstChild("NebulaColorCorrection")
+            if colorCorrection then colorCorrection:Destroy() end
+
+            local atmosphere = lighting:FindFirstChild("NebulaAtmosphere")
+            if atmosphere then atmosphere:Destroy() end
+
+            local starEmitter = workspace:FindFirstChild("NebulaStarEmitter")
+            if starEmitter then starEmitter:Destroy() end
+
+            lighting.Ambient = Color3.fromRGB(127, 127, 127)
+            lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
+
+        end
+    end,
 })
 
 
