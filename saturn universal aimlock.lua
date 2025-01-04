@@ -346,46 +346,29 @@ local function getMousePosition()
     return GetMouseLocation(UserInputService)
 end
 
-local function IsPlayerVisible(Player)
-    local PlayerCharacter = Player.Character
-    local LocalPlayerCharacter = LocalPlayer.Character
-    
-    if not (PlayerCharacter or LocalPlayerCharacter) then return end 
-    
-    local PlayerRoot = FindFirstChild(PlayerCharacter, Options.TargetPart.Value) or FindFirstChild(PlayerCharacter, "HumanoidRootPart")
-    
-    if not PlayerRoot then return end 
-    
-    local CastPoints, IgnoreList = {PlayerRoot.Position, LocalPlayerCharacter, PlayerCharacter}, {LocalPlayerCharacter, PlayerCharacter}
-    local ObscuringObjects = #GetPartsObscuringTarget(Camera, CastPoints, IgnoreList)
-    
-    return ((ObscuringObjects == 0 and true) or (ObscuringObjects > 0 and false))
-end
-
 local function getClosestPlayer()
     if not Options.TargetPart.Value then return end
     local Closest
     local DistanceToMouse
     for _, Player in next, GetPlayers(Players) do
-        if Player == LocalPlayer then continue end
-        if Toggles.TeamCheck.Value and Player.Team == LocalPlayer.Team then continue end
-
-        local Character = Player.Character
-        if not Character then continue end
-        
-        if Toggles.VisibleCheck.Value and not IsPlayerVisible(Player) then continue end
-
-        local HumanoidRootPart = FindFirstChild(Character, "HumanoidRootPart")
-        local Humanoid = FindFirstChild(Character, "Humanoid")
-        if not HumanoidRootPart or not Humanoid or Humanoid and Humanoid.Health <= 0 then continue end
-
-        local ScreenPosition, OnScreen = getPositionOnScreen(HumanoidRootPart.Position)
-        if not OnScreen then continue end
-
-        local Distance = (getMousePosition() - ScreenPosition).Magnitude
-        if Distance <= (DistanceToMouse or Options.Radius.Value or 2000) then
-            Closest = ((Options.TargetPart.Value == "Random" and Character[ValidTargetParts[math.random(1, #ValidTargetParts)]]) or Character[Options.TargetPart.Value])
-            DistanceToMouse = Distance
+        if Player == LocalPlayer then
+        elseif Toggles.TeamCheck.Value and Player.Team == LocalPlayer.Team then
+        else
+            local Character = Player.Character
+            if Character then
+                local HumanoidRootPart = FindFirstChild(Character, "HumanoidRootPart")
+                local Humanoid = FindFirstChild(Character, "Humanoid")
+                if HumanoidRootPart and Humanoid and Humanoid.Health > 0 then
+                    local ScreenPosition, OnScreen = getPositionOnScreen(HumanoidRootPart.Position)
+                    if OnScreen then
+                        local Distance = (getMousePosition() - ScreenPosition).Magnitude
+                        if Distance <= (DistanceToMouse or Options.Radius.Value or 2000) then
+                            Closest = ((Options.TargetPart.Value == "Random" and Character[ValidTargetParts[math.random(1, #ValidTargetParts)]]) or Character[Options.TargetPart.Value])
+                            DistanceToMouse = Distance
+                        end
+                    end
+                end
+            end
         end
     end
     return Closest
@@ -750,32 +733,56 @@ velbox:AddSlider("velset", {
 })
 
 local antiLockEnabled = false
-local resolverIntensity = 1.0
+local resolverIntensity = 1.5
 local resolverMethod = "Recalculate"
-
+local positionHistory = {}
+local historyLimit = 5 
+local outlierThreshold = 20 
 
 RunService.RenderStepped:Connect(function()
     if aimLockEnabled and isLockedOn and targetPlayer and targetPlayer.Character then
+        local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
         local partName = getBodyPart(targetPlayer.Character, bodyPartSelected)
         local part = targetPlayer.Character:FindFirstChild(partName)
 
-        if part and targetPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+        if part and humanoid and humanoid.Health > 0 then
             local predictedPosition = part.Position + (part.AssemblyLinearVelocity * predictionFactor)
+            local velocity = part.AssemblyLinearVelocity
+            local averagePosition = Vector3.new(0, 0, 0)
 
-            if antiLockEnabled then
-                if resolverMethod == "Recalculate" then
+            table.insert(positionHistory, part.Position)
+            if #positionHistory > historyLimit then
+                table.remove(positionHistory, 1)
+            end
 
-                    predictedPosition = predictedPosition + (part.AssemblyLinearVelocity * resolverIntensity)
-                elseif resolverMethod == "Randomize" then
+            for _, pos in ipairs(positionHistory) do
+                averagePosition = averagePosition + pos
+            end
+            averagePosition = averagePosition / math.max(#positionHistory, 1)
 
-                    predictedPosition = predictedPosition + Vector3.new(
-                        math.random() * resolverIntensity - (resolverIntensity / 2),
-                        math.random() * resolverIntensity - (resolverIntensity / 2),
-                        math.random() * resolverIntensity - (resolverIntensity / 2)
-                    )
-                elseif resolverMethod == "Invert" then
 
-                    predictedPosition = predictedPosition - (part.AssemblyLinearVelocity * resolverIntensity * 2)
+            local deviation = (predictedPosition - averagePosition).Magnitude
+            if deviation > outlierThreshold then
+                predictedPosition = averagePosition 
+            else
+                if antiLockEnabled then
+                    if resolverMethod == "Recalculate" then
+                        predictedPosition = predictedPosition + (velocity * resolverIntensity)
+                    elseif resolverMethod == "Randomize" then
+                        predictedPosition = predictedPosition + Vector3.new(
+                            math.random() * resolverIntensity - (resolverIntensity / 2),
+                            math.random() * resolverIntensity - (resolverIntensity / 2),
+                            math.random() * resolverIntensity - (resolverIntensity / 2)
+                        )
+                    elseif resolverMethod == "Invert" then
+                        predictedPosition = predictedPosition - (velocity * resolverIntensity * 2)
+                    elseif resolverMethod == "SmoothDamp" then
+                        local targetVelocity = (averagePosition - part.Position).Unit * velocity.Magnitude
+                        predictedPosition = predictedPosition + targetVelocity * resolverIntensity * 0.1
+                    elseif resolverMethod == "AdaptiveWeighted" then
+                        local weight = math.clamp(deviation / outlierThreshold, 0, 1)
+                        predictedPosition = averagePosition:Lerp(predictedPosition, weight)
+                    end
                 end
             end
 
@@ -784,13 +791,13 @@ RunService.RenderStepped:Connect(function()
         else
             isLockedOn = false
             targetPlayer = nil
+            positionHistory = {}
         end
     end
 end)
 
-
 aimbox:AddToggle("antiLock_Enabled", {
-    Text = "Enable Anti Lock Resolver",
+    Text = "Anti Lock Resolver",
     Default = false,
     Tooltip = "Toggle the Anti Lock Resolver on or off.",
     Callback = function(value)
@@ -800,7 +807,7 @@ aimbox:AddToggle("antiLock_Enabled", {
 
 aimbox:AddSlider("ResolverIntensity", {
     Text = "Resolver Intensity",
-    Default = 1.0,
+    Default = 1.5,
     Min = 0,
     Max = 5,
     Rounding = 2,
@@ -811,8 +818,8 @@ aimbox:AddSlider("ResolverIntensity", {
 })
 
 aimbox:AddDropdown("ResolverMethods", {
-    Values = {"Recalculate", "Randomize", "Invert"},
-    Default = "Recalculate", 
+    Values = {"Recalculate", "Randomize", "Invert", "SmoothDamp", "AdaptiveWeighted"},
+    Default = "Recalculate",
     Multi = false,
     Text = "Resolver Method",
     Tooltip = "Select the method used by the Anti Lock Resolver.",
@@ -2491,6 +2498,5 @@ task.spawn(function()
         end
     end
 end)
-
 
 ThemeManager:LoadDefaultTheme()
