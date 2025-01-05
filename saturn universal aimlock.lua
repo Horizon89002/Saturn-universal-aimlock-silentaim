@@ -468,7 +468,7 @@ local Window = Library:CreateWindow({
 
 local GeneralTab = Window:AddTab("Main")
 local aimbox = GeneralTab:AddRightGroupbox("           AimLock")
-local velbox = GeneralTab:AddRightGroupbox("        Anti Lock")
+local velbox = GeneralTab:AddRightGroupbox("           Anti Lock")
 local otherTab = Window:AddTab("game")
 local settingsTab = Window:AddTab("settings")
 
@@ -553,184 +553,115 @@ aimbox:AddDropdown("BodyParts", {
     end,
 })
 
-
-local reverseResolveIntensity = 5
-getgenv().Desync = false
-getgenv().DesyncEnabled = false
-local hip = 2.80
-local val = -35
-local selectedMode = "Velocity spoof"  
-
-local defaultHipHeight = 2.0  
-
-local function clearVelocityAndEffects()
-    local player = game.Players.LocalPlayer
-    local character = player.Character
-    if not character then return end 
-
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-
-    humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-    humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(0, 0, 0)
-end
-
-local function applyVelocityDesync()
-    local player = game.Players.LocalPlayer
-    local character = player.Character
-    if not character then return end 
-
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-
-    local originalVelocity = humanoidRootPart.Velocity
-
-    local randomOffset = Vector3.new(
-        math.random(-1, 1) * reverseResolveIntensity * 1000,
-        math.random(-1, 1) * reverseResolveIntensity * 1000,
-        math.random(-1, 1) * reverseResolveIntensity * 1000
-    )
-
-    humanoidRootPart.Velocity = randomOffset
-    humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(
-        0,
-        math.random(-1, 1) * reverseResolveIntensity * 0.001,
-        0
-    )
-
-    game:GetService("RunService").RenderStepped:Wait()
-
-    humanoidRootPart.Velocity = originalVelocity
-end
-
-local function applyHipHeightAdjustment()
-    local player = game.Players.LocalPlayer
-    local character = player.Character
-    if not character then return end 
-
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChild("Humanoid")
-    if not humanoidRootPart or not humanoid then return end
-
-
-    local oldVelocity = humanoidRootPart.Velocity
-    humanoidRootPart.Velocity = Vector3.new(oldVelocity.X, val, oldVelocity.Z)
-    
-    humanoid.HipHeight = hip
-end
-
-local function resetHipHeight()
-    local player = game.Players.LocalPlayer
-    local character = player.Character
-    if not character then return end 
-
-    local humanoid = character:FindFirstChild("Humanoid")
-    if humanoid then
-
-        humanoid.HipHeight = defaultHipHeight
-    end
-end
+local spoofset = {
+    Enable = false,
+    X = 1000,
+    Y = 991,
+    Z = 100,
+    Mode = "Random",  
+    Randomness = 2000 
+}
 
 game:GetService("RunService").Heartbeat:Connect(function()
-    if getgenv().DesyncEnabled and getgenv().Desync then
-        if selectedMode == "Velocity spoof" then
-            applyVelocityDesync()
-        elseif selectedMode == "Hip Height spoof" then
-            applyHipHeightAdjustment()
+    if spoofset.Enable then
+        local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+        local originalVelocity = hrp.Velocity
+        
+        if spoofset.Mode == "Custom" then
+            hrp.Velocity = Vector3.new(spoofset.X, spoofset.Y, spoofset.Z)
+        elseif spoofset.Mode == "Random" then
+            local randomX = math.random(-spoofset.Randomness, spoofset.Randomness)
+            local randomY = math.random(-spoofset.Randomness, spoofset.Randomness)
+            local randomZ = math.random(-spoofset.Randomness, spoofset.Randomness)
+            hrp.Velocity = Vector3.new(randomX, randomY, randomZ)
+        elseif spoofset.Mode == "Look Vector" then
+            local camera = game.Workspace.CurrentCamera
+            local lookVector = camera.CFrame.LookVector
+            hrp.Velocity = lookVector * 10000 
         end
-    else
-        if selectedMode == "Hip Height spoof" then
-            resetHipHeight()  
-        end
+
+        game:GetService("RunService").RenderStepped:Wait()
+        hrp.Velocity = originalVelocity
     end
 end)
 
-velbox:AddToggle("desyncMasterEnabled", {
+velbox:AddToggle("EnableVelocityControl", {
     Text = "Enable Anti Lock",
     Default = false,
-    Tooltip = "Enable/disable anti-lock",
+    Tooltip = "Enable or disable velocity modification.",
     Callback = function(value)
-        getgenv().DesyncEnabled = value
+        spoofset.Enable = value
     end,
 })
 
-velbox:AddToggle("desyncEnabled", {
-    Text = "Anti Lock keybind",
-    Default = false,
-    Tooltip = "Turn it on/off",
-    Callback = function(value)
-        getgenv().Desync = value
-        if not value then
-            resetHipHeight()  
-        end
-    end,
-}):AddKeyPicker("desyncToggleKey", {
-    Default = "V", 
-    SyncToggleState = true,
-    Mode = "Toggle",
-    Text = "Desync Toggle Key",
-    Tooltip = "The keybind to toggle desync",
-    Callback = function(value)
-        getgenv().Desync = value
-        if not value then
-            resetHipHeight()  
-        end
-    end,
-})
-
-velbox:AddDropdown("DesyncMode", {
-    Values = {"Velocity spoof", "Hip Height spoof"},
-    Default = "Velocity spoof",
+velbox:AddDropdown("VelocityMode", {
+    Values = {"Custom", "Random"},
+    Default = "Random",
     Multi = false,
-    Text = "Method",
-    Tooltip = "Select anti-lock method",
+    Text = "Velocity Mode",
+    Tooltip = "select the method",
     Callback = function(value)
-        selectedMode = value
+        spoofset.Mode = value
+        if value == "Custom" then
+            spoofset.X = 1000
+            spoofset.Y = 991
+            spoofset.Z = 100
+        elseif value == "Random" then
 
-        if selectedMode == "Hip Height spoof" then
-            getgenv().Desync = false  
-            clearVelocityAndEffects() 
-        elseif selectedMode == "Velocity spoof" then
-            getgenv().Desync = true  
         end
     end,
 })
 
-velbox:AddSlider("ReverseResolveIntensity", {
-    Text = "Velocity amount",
-    Default = 5,
-    Min = 1,
-    Max = 10,
-    Rounding = 0,
-    Tooltip = "Amount of velocity spoof",
-    Callback = function(value)
-        reverseResolveIntensity = value
-    end,
-})
 
-velbox:AddSlider("hipset", {
-    Text = "Hip Height",
-    Default = 2.8,
-    Min = 0.6,
-    Max = 10,
+velbox:AddSlider("XSlider", {
+    Text = "X-axis",
+    Default = spoofset.X,
+    Min = -2000,
+    Max = 2000,
     Rounding = 1,
-    Tooltip = "Hip height spoofer amount, don't touch if you don't know what you're doing",
+    Tooltip = "why do you need a tip didnt you learn math in school?",
     Callback = function(value)
-        hip = value
+        spoofset.X = value
     end,
 })
 
-velbox:AddSlider("velset", {
-    Text = "Vertical Velocity",
-    Default = -35,
-    Min = -100,
-    Max = 1,
-    Rounding = 2,
-    Tooltip = "Hip height spoofers vertical velocity, don't touch if you don't know what you're doing",
+velbox:AddSlider("YSlider", {
+    Text = "Y-axis",
+    Default = spoofset.Y,
+    Min = -2000,
+    Max = 2000,
+    Rounding = 1,
+    Tooltip = "why do you need a tip didnt you learn math in school?",
     Callback = function(value)
-        val = value
+        spoofset.Y = value
     end,
 })
+
+velbox:AddSlider("ZSlider", {
+    Text = "Z-axis",
+    Default = spoofset.Z,
+    Min = -2000,
+    Max = 2000,
+    Rounding = 1,
+    Tooltip = "why do you need a tip didnt you learn math in school?",
+    Callback = function(value)
+        spoofset.Z = value
+    end,
+})
+
+velbox:AddSlider("RSlider", {
+    Text = "random amount",
+    Default = 2000,
+    Min = 10,
+    Max = 5000,
+    Rounding = 1,
+    Tooltip = "Adjust the Z-axis velocity",
+    Callback = function(value)
+        spoofset.Randomness = value
+    end,
+})
+
+
 
 local antiLockEnabled = false
 local resolverIntensity = 1.5
@@ -1910,43 +1841,47 @@ end)
 
 local orbbox = GeneralTab:AddRightGroupbox("        Orbit AimLock")
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local Mouse = LocalPlayer:GetMouse()
-local isLockedOn = false
-local targetPlayer = nil
-local lockEnabled = false
-local aimLockEnabled = false
-local bodyPartSelected = "Head"
+local Services = {
+    Players = game:GetService("Players"),
+    RunService = game:GetService("RunService"),
+    Camera = workspace.CurrentCamera
+}
 
-local isOrbiting = false
-local orbitDuration = 2 
-local orbitDistance = 5 
-local tpBackEnabled = false
-local viewPlayerEnabled = false
-local savedPosition = nil
+local LocalPlayer, Mouse = Services.Players.LocalPlayer, Services.Players.LocalPlayer:GetMouse()
+local state = {
+    isLockedOn = false,
+    targetPlayer = nil,
+    lockEnabled = false,
+    aimLockEnabled = false,
+    bodyPartSelected = "Head",
+    isOrbiting = false,
+    orbitDuration = 2,
+    orbitDistance = 5,
+    tpBackEnabled = false,
+    viewPlayerEnabled = false,
+    savedPosition = nil
+}
 
 local function getBodyPart(character, part)
     return character:FindFirstChild(part) and part or "Head"
 end
 
 local function getNearestPlayerToMouse()
-    if not aimLockEnabled then return nil end
-    local nearestPlayer = nil
-    local shortestDistance = math.huge
-    local mousePosition = Camera:ViewportPointToRay(Mouse.X, Mouse.Y).Origin
+    if not state.aimLockEnabled then return nil end
+    local nearestPlayer, shortestDistance = nil, math.huge
+    local mousePosition = Services.Camera:ViewportPointToRay(Mouse.X, Mouse.Y).Origin
 
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(bodyPartSelected) then
-            local part = player.Character[bodyPartSelected]
-            local screenPosition, onScreen = Camera:WorldToViewportPoint(part.Position)
-            if onScreen then
-                local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-                if distance < shortestDistance then
-                    nearestPlayer = player
-                    shortestDistance = distance
+    for _, player in ipairs(Services.Players:GetPlayers()) do
+        local character = player.Character
+        if player ~= LocalPlayer and character then
+            local part = character:FindFirstChild(state.bodyPartSelected)
+            if part then
+                local screenPosition, onScreen = Services.Camera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                    if distance < shortestDistance then
+                        nearestPlayer, shortestDistance = player, distance
+                    end
                 end
             end
         end
@@ -1954,101 +1889,85 @@ local function getNearestPlayerToMouse()
     return nearestPlayer
 end
 
-local function setCameraToPlayer(target)
-    if target and target.Character then
-        local targetCamera = target.Character:FindFirstChild("HumanoidRootPart")
-        if targetCamera then
-            Camera.CameraSubject = target.Character:FindFirstChildOfClass("Humanoid")
-            Camera.CameraType = Enum.CameraType.Custom
-        end
+local function setCamera(target)
+    local character = target and target.Character or LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        Services.Camera.CameraSubject = humanoid
+        Services.Camera.CameraType = Enum.CameraType.Custom
     end
 end
 
-local function resetCamera()
-    Camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    Camera.CameraType = Enum.CameraType.Custom
-end
-
 local function orbitUpdate(humanoidRootPart, targetPart, startTime, connection)
-    local angle = (tick() - startTime) * math.pi * 2 * 5 
-    local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * orbitDistance
-    humanoidRootPart.CFrame = CFrame.new(targetPart.Position + offset)
-    if not viewPlayerEnabled then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+    local angle = (tick() - startTime) * math.pi * 10
+    humanoidRootPart.CFrame = CFrame.new(targetPart.Position + Vector3.new(math.cos(angle), 0, math.sin(angle)) * state.orbitDistance)
+    if not state.viewPlayerEnabled then
+        Services.Camera.CFrame = CFrame.new(Services.Camera.CFrame.Position, targetPart.Position)
     end
 end
 
 local function orbitCharacter(target, duration)
     if not target or not target.Character then return end
+    state.isOrbiting = true
 
-    isOrbiting = true
     local humanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local targetPart = target.Character:FindFirstChild("HumanoidRootPart")
 
-    if tpBackEnabled and humanoidRootPart then
-        savedPosition = humanoidRootPart.CFrame
+    if state.tpBackEnabled and humanoidRootPart then
+        state.savedPosition = humanoidRootPart.CFrame
     end
 
     if humanoidRootPart and targetPart then
         humanoidRootPart.CanCollide = false
-
-        if viewPlayerEnabled then
-            setCameraToPlayer(target)
-        end
+        if state.viewPlayerEnabled then setCamera(target) end
 
         local startTime = tick()
         local connection
-        connection = RunService.RenderStepped:Connect(function()
+        connection = Services.RunService.RenderStepped:Connect(function()
             if tick() - startTime > duration then
                 humanoidRootPart.CanCollide = true
-                isOrbiting = false
-                isLockedOn = false
-                
-                if tpBackEnabled and savedPosition then
-                    humanoidRootPart.CFrame = savedPosition
+                state.isOrbiting, state.isLockedOn = false, false
+                if state.tpBackEnabled and state.savedPosition then
+                    humanoidRootPart.CFrame = state.savedPosition
                 end
-                
-                resetCamera()
+                setCamera(nil)
                 connection:Disconnect()
                 return
             end
-
             orbitUpdate(humanoidRootPart, targetPart, startTime, connection)
         end)
     end
 end
 
 local function toggleLockOnPlayer()
-    if not lockEnabled or not aimLockEnabled then return end
-
-    if isLockedOn then
-        isLockedOn = false
-        targetPlayer = nil
-        resetCamera()
+    if not (state.lockEnabled and state.aimLockEnabled) then return end
+    if state.isLockedOn then
+        state.isLockedOn, state.targetPlayer = false, nil
+        setCamera(nil)
     else
-        targetPlayer = getNearestPlayerToMouse()
-        if targetPlayer and targetPlayer.Character then
-            local part = getBodyPart(targetPlayer.Character, bodyPartSelected)
-            if targetPlayer.Character:FindFirstChild(part) then
-                isLockedOn = true
-                orbitCharacter(targetPlayer, orbitDuration)
+        local target = getNearestPlayerToMouse()
+        if target and target.Character then
+            local part = getBodyPart(target.Character, state.bodyPartSelected)
+            if target.Character:FindFirstChild(part) then
+                state.isLockedOn, state.targetPlayer = true, target
+                orbitCharacter(target, state.orbitDuration)
             end
         end
     end
 end
 
-RunService.RenderStepped:Connect(function()
-    if aimLockEnabled and lockEnabled and isLockedOn and targetPlayer and targetPlayer.Character then
-        local partName = getBodyPart(targetPlayer.Character, bodyPartSelected)
-        local part = targetPlayer.Character:FindFirstChild(partName)
+Services.RunService.RenderStepped:Connect(function()
+    if state.isLockedOn and state.targetPlayer and state.targetPlayer.Character then
+        local partName = getBodyPart(state.targetPlayer.Character, state.bodyPartSelected)
+        local part = state.targetPlayer.Character:FindFirstChild(partName)
+        local humanoid = state.targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 
-        if part and targetPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-            if not viewPlayerEnabled then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+        if part and humanoid and humanoid.Health > 0 then
+            if not state.viewPlayerEnabled then
+                Services.Camera.CFrame = CFrame.new(Services.Camera.CFrame.Position, part.Position)
             end
         else
-            isLockedOn = false
-            targetPlayer = nil
+            state.isLockedOn, state.targetPlayer = false, nil
         end
     end
 end)
@@ -2058,11 +1977,9 @@ orbbox:AddToggle("orbitAimLock_Enabled", {
     Default = false,
     Tooltip = "Toggle the Orbit AimLock feature on or off.",
     Callback = function(value)
-        aimLockEnabled = value 
-        if not aimLockEnabled then
-            lockEnabled = false
-            isLockedOn = false
-            targetPlayer = nil
+        state.aimLockEnabled = value
+        if not value then
+            state.lockEnabled, state.isLockedOn, state.targetPlayer = false, false, nil
         end
     end,
 })
@@ -2072,10 +1989,9 @@ orbbox:AddToggle("orbitEnabled", {
     Default = false,
     Tooltip = "Toggle the Orbit feature on or off.",
     Callback = function(value)
-        lockEnabled = value 
-        if not lockEnabled then
-            isLockedOn = false
-            targetPlayer = nil
+        state.lockEnabled = value
+        if not value then
+            state.isLockedOn, state.targetPlayer = false, nil
         end
     end,
 }):AddKeyPicker("orbitEnabled_KeyPicker", {
@@ -2084,34 +2000,25 @@ orbbox:AddToggle("orbitEnabled", {
     Mode = "Toggle",
     Text = "Orbit Key",
     Tooltip = "Key to toggle Orbit AimLock.",
-    Callback = function()
-        toggleLockOnPlayer()
-    end,
+    Callback = toggleLockOnPlayer,
 })
-
 
 orbbox:AddToggle("viewPlayer", {
     Text = "View Player",
     Default = false,
     Tooltip = "When enabled, view the player while orbiting",
     Callback = function(value)
-        viewPlayerEnabled = value
-        if not value then
-            resetCamera()
-        end
+        state.viewPlayerEnabled = value
+        if not value then setCamera(nil) end
     end,
 })
-
 
 orbbox:AddToggle("tpBackToPosition", {
     Text = "TP Back to Position",
     Default = false,
     Tooltip = "Save your position before orbiting and teleport back when done.",
-    Callback = function(value)
-        tpBackEnabled = value
-    end,
+    Callback = function(value) state.tpBackEnabled = value end,
 })
-
 
 orbbox:AddSlider("Orbit_timer", {
     Text = "Orbit Interval (sec)",
@@ -2119,10 +2026,8 @@ orbbox:AddSlider("Orbit_timer", {
     Min = 0.5,
     Max = 30,
     Rounding = 1,
-    Tooltip = "the amount of seconds you will orbit around",
-    Callback = function(value)
-        orbitDuration = value
-    end,
+    Tooltip = "The amount of seconds you will orbit around",
+    Callback = function(value) state.orbitDuration = value end,
 })
 
 orbbox:AddSlider("Orbit_studs", {
@@ -2131,22 +2036,17 @@ orbbox:AddSlider("Orbit_studs", {
     Min = 1,
     Max = 50,
     Rounding = 1,
-    Tooltip = "the distance of the orbit",
-    Callback = function(value)
-        orbitDistance = value
-    end,
+    Tooltip = "The distance of the orbit",
+    Callback = function(value) state.orbitDistance = value end,
 })
-
 
 orbbox:AddDropdown("orbitBodyParts", {
     Values = {"Head", "UpperTorso", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg", "LeftUpperArm"},
     Default = "Head",
     Multi = false,
-    Text = "target Body Part",
+    Text = "Target Body Part",
     Tooltip = "Select which body part to orbit around.",
-    Callback = function(value)
-        bodyPartSelected = value 
-    end,
+    Callback = function(value) state.bodyPartSelected = value end,
 })
 
 
@@ -2498,5 +2398,6 @@ task.spawn(function()
         end
     end
 end)
+
 
 ThemeManager:LoadDefaultTheme()
